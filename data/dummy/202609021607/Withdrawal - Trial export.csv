@@ -1,0 +1,24 @@
+StudyPtID,WD_Total_WithdrawAll,WD_Reason
+ACH-00010,No,Consent withdrawn for some or all trial elements
+ACH-00017,No,Consent withdrawn for some or all trial elements
+ACH-00023,No,Appeared eligible at enrolment but subsequently found not to be
+DS9-00001,Yes,Appeared eligible at enrolment but subsequently found not to be
+DS9-00003,No,Consent withdrawn for some or all trial elements
+DS9-00012,Yes,Invalid consent
+DS9-00040,Yes,Consent withdrawn for some or all trial elements
+RAH-00002,No,Invalid consent
+RAH-00005,No,Enrolled in error as was not eligible at time of enrolment
+RAH-00007,No,Consent withdrawn for some or all trial elements
+RAH-00028,No,Consent withdrawn for some or all trial elements
+RAH-00038,No,Consent withdrawn for some or all trial elements
+RAH-00042,Yes,Consent withdrawn for some or all trial elements
+RAH-00044,No,Invalid consent
+RAH-00045,Yes,Consent withdrawn for some or all trial elements
+RDH-00009,No,Consent withdrawn for some or all trial elements
+RDH-00010,Yes,Appeared eligible at enrolment but subsequently found not to be
+RDH-00011,No,Enrolled in error as was not eligible at time of enrolment
+RPH-00008,Yes,Invalid consent
+RPH-00013,Yes,Enrolled in error as was not eligible at time of enrolment
+WAH-00001,No,Consent withdrawn for some or all trial elements
+WAH-00005,No,Consent withdrawn for some or all trial elements
+WAH-00030,Yes,Consent withdrawn for some or all trial elements
