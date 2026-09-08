@@ -47,7 +47,7 @@ cfg$data <- list(
       "elig_d3",
       "elig_d1",
       "elig_plt",
-      "rand_status",
+      "pt_listing",
       "withdraw",
       "removals"
     ),
@@ -75,25 +75,9 @@ cfg$data <- list(
     DB02 = "Extended Prophylaxis"
   ),
   
-  # Recode screening outcomes with alt descriptors
-  d_valid_outcomes = data.table(
-    EL_Outcome = c(
-      "randomised", "randomised pending", 
-      "registry", 
-      "not eligible", "excluded", "not included",
-      NA
-    ),
-    outcome = c(
-      "randomised", NA_character_,
-      "registry", 
-      "not eligible", "not eligible", "not eligible",
-      NA_character_
-    )
-  ),
-  
   # Protocol exclusion criteria 1-8, and the eligibility-export flag column
   # that records each one.
-  d_excl_flags_spec <- data.table(
+  d_excl_flags_spec = data.table(
     column = c(
       "EL_Excl_IndexJoint",
       "EL_Excl_PreviousParticipation_IndexJoint",
@@ -114,8 +98,66 @@ cfg$data <- list(
       "#7 Unlikely accessible for 12mo follow-up",
       "#8 Not in patient's best interests"
     )
+  ),
+  
+  
+  l_domain_spec = list(
+    SD = list(
+      label = "Surgical", file = "elig_d1", 
+      arm_col = "PT_Assigned_DomainSD",
+      consent_column = "CON_DomainSD",
+      consent_pending = TRUE
+    ),
+    AC = list(
+      label = "AB Choice", file = "elig_d4", 
+      arm_col = "PT_Assigned_DomainAC",
+      consent_column = "CON_DomainAC",
+      consent_pending = TRUE
+    ),
+    DA = list(
+      label = "AB Duration A", file = "elig_d2", 
+      arm_col = "PT_Assigned_DomainDA",
+      consent_column = "CON_DomainDA_DB",
+      consent_pending = FALSE
+    ),
+    DB = list(
+      label = "AB Duration B", file = "elig_d3", 
+      arm_col = "PT_Assigned_DomainDB",
+      consent_column = "CON_DomainDA_DB",
+      consent_pending = FALSE
+    )
   )
+  
 )
+
+# mandatory cols for specific data extracts
+cfg$data$d_file_desc[, cols := vector("list", .N)]
+cfg$data$d_file_desc[
+  name == "elig_plt", cols := c(
+    "EligibilityCode", "EL_SiteCode", "EL_Outcome", "StudyPtID", 
+    "EL_Incl_PhysicallyPresent", "RegistryPtID")]
+cfg$data$d_file_desc[
+  name == "removals", cols := c(
+    "eligibility-code", "platform-code", "registry-code")]
+cfg$data$d_file_desc[
+  name == "withdraw", cols := c(
+    "StudyPtID", "WD_Total_WithdrawAll", "WD_Reason")]
+cfg$data$d_file_desc[
+  name == "pt_listing", cols := c(
+    "StudyPtID")]
+cfg$data$d_file_desc[
+  name == "elig_d1", cols := c(
+    "StudyPtID", "EL_Outcome")]
+cfg$data$d_file_desc[
+  name == "elig_d2", cols := c(
+    "StudyPtID", "EL_Outcome")]
+cfg$data$d_file_desc[
+  name == "elig_d3", cols := c(
+    "StudyPtID", "EL_Outcome")]
+cfg$data$d_file_desc[
+  name == "elig_d4", cols := c(
+    "StudyPtID", "EL_Outcome")]
+
 
 
 cfg$fig_spec <- list(

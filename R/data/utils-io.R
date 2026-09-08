@@ -1,6 +1,6 @@
 library(data.table)
 library(here)
-library(kableExtra)
+library(lubridate)
 
 read_extract <- function(cfg){
   
@@ -17,6 +17,7 @@ read_extract <- function(cfg){
   
   l_data_raw <- list()
   
+  i = 5
   for(i in 1:nrow(d_file_desc)){
     f <- v_fnames[grep(d_file_desc$prefix[i], v_fnames)]
     if (length(f) != 1) {
@@ -24,6 +25,13 @@ read_extract <- function(cfg){
     }
     l_data_raw[[d_file_desc$name[i]]] <- 
       fread(file = here(dir_data_raw, basename(f)))
+    
+    check_columns(
+      d_file_desc$prefix[i],
+      cfg$data$d_file_desc$cols[i][[1]],
+      names(l_data_raw[[d_file_desc$name[i]]])
+      )
+    
   }
   
   if(cfg$data$verbose){
@@ -43,4 +51,17 @@ read_extract <- function(cfg){
   
   l_data_raw
   
+}
+
+
+check_columns <- function(file_label, cols_reqd, cols) {
+  
+  missing_cols <- base::setdiff(cols_reqd, cols)
+  
+  if (length(missing_cols) > 0) {
+    stop(file_label, " is missing required column(s): ",
+         paste(missing_cols, collapse = ", "), call. = FALSE)
+  }
+  
+  return(T)
 }
