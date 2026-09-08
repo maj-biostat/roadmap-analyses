@@ -35,13 +35,17 @@ summarise_domain_reveals <- function(
 
 # Day 365 includes randomised participants with Day >= 365 in the
 # participant list.
-day365_count <- function(consort) {
+day365_count <- function(
+    d_pt_listing,
+    platform_ids,
+    n_randomised
+    ) {
   
-  if (is.null(consort$pt_listing) || !"Day" %in% names(consort$pt_listing)) {
+  if (is.null(d_pt_listing) || !"Day" %in% names(d_pt_listing)) {
     message("Warning: no participant list or no Day column; Day 365 count unavailable.")
     return(NA_integer_)
   }
-  randomised_rows <- consort$pt_listing[StudyPtID %in% consort$platform_ids]
+  randomised_rows <- d_pt_listing[StudyPtID %in% platform_ids]
   randomised_rows[, day_number := suppressWarnings(as.numeric(Day))]
   n_day_not_numeric <- sum(is.na(randomised_rows$day_number) & !is.na(randomised_rows$Day))
   if (n_day_not_numeric > 0) {

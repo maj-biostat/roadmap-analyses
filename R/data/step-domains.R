@@ -6,11 +6,12 @@
 # one domain) and are not added together.
 count_domain <- function(
     d_screening,
+    d_pt_listing,
     # data for this domain from the extract
     d_domain, 
     dom_spec, 
-    # probably shouldn't include dependencies on this but will do as first pass.
-    consort,
+    platform_ids, 
+    removed_ids,
     cfg  
     ) {
   
@@ -45,8 +46,8 @@ count_domain <- function(
   
   # Separate valid, removed and unmatched revealed IDs.
   revealed_all <- unique(d_domain[outcome == "Randomised" & !is.na(StudyPtID), StudyPtID])
-  revealed_removed <- intersect(revealed_all, consort$removed_ids)
-  revealed_unmatched <- setdiff(revealed_all, union(consort$platform_ids, consort$removed_ids))
+  revealed_removed <- intersect(revealed_all, removed_ids)
+  revealed_unmatched <- setdiff(revealed_all, union(platform_ids, removed_ids))
   
   if (length(revealed_removed) > 0) {
     message(dom_spec$label, ": ", length(revealed_removed),
@@ -59,7 +60,7 @@ count_domain <- function(
     stop(problem, call. = FALSE)
   }
   
-  d_domain <- d_domain[StudyPtID %in% consort$platform_ids & !is.na(StudyPtID)]
+  d_domain <- d_domain[StudyPtID %in% platform_ids & !is.na(StudyPtID)]
   
   # Check for participants with more than one outcome in the same domain.
   conflicting <- unique(d_domain[, .(StudyPtID, outcome_or_pending = fcoalesce(outcome, "<pending>"))])
@@ -92,7 +93,7 @@ count_domain <- function(
   
   # Classify randomised participants with no domain row by consent status.
   # IDs not present in this domain
-  absent_ids <- setdiff(consort$platform_ids, unique(d_domain$StudyPtID))
+  absent_ids <- setdiff(platform_ids, unique(d_domain$StudyPtID))
   n_consented_absent <- 0L
   n_na_consent <- 0L
   if (length(absent_ids) > 0 && dom_spec$consent_column %in% names(d_screening)) {
@@ -123,16 +124,16 @@ count_domain <- function(
   if (length(result$revealed_ids) == 0) {
     return(result)
   }
-  if (is.null(consort$pt_listing)) {
+  if (is.null(d_pt_listing)) {
     message("Warning: ", dom_spec$label, ": no participant list, so no arm split.")
     result$arms <- rep(NA_character_, length(result$revealed_ids))
     return(result)
   }
   
-  check_columns(dom_spec$file, dom_spec$arm_col, names(consort$pt_listing))
+  check_columns(dom_spec$file, dom_spec$arm_col, names(d_pt_listing))
 
-  list_rows <- match(result$revealed_ids, consort$pt_listing$StudyPtID)
-  codes <- clean_code(consort$pt_listing[[dom_spec$arm_col]])[list_rows]
+  list_rows <- match(result$revealed_ids, d_pt_listing$StudyPtID)
+  codes <- clean_code(d_pt_listing[[dom_spec$arm_col]])[list_rows]
   unknown_codes <- setdiff(unique(drop_na_values(codes)), names(cfg$data$arm_labels))
   if (length(unknown_codes) > 0) {
     stop(dom_spec$label, ": unknown arm code(s) ", paste(unknown_codes, collapse = ", "),
@@ -148,28 +149,38 @@ count_domain <- function(
   result
 }
 
+
+
 # Run count_domain() for every row of domain_spec (in config), returning a named list
 # of results keyed by domain code (SD, AC, DA, DB).
-count_all_domains <- function(consort, l_extract, cfg) {
+count_all_domains <- function(
+    d_screening,
+    d_pt_listing,
+    platform_ids, removed_ids,
+    l_extract, cfg
+    ) {
   
+  # local copies for convenience
   domain_results <- list()
   domain_spec <- copy(cfg$data$l_domain_spec)
   spec_names <- names(domain_spec)
   d_file_desc <- copy(cfg$data$d_file_desc)
-  d_screening = copy(consort$screening)
   
   i = 1
   for (i in seq_along(domain_spec)) {
     
     dom_spec <- domain_spec[[i]]
+    # pick up the raw data
     d_domain = copy(l_extract[[dom_spec$file]])
     
     domain_results[[ spec_names[i] ]] <- count_domain(
       d_screening,
+      d_pt_listing,
       # data for this domain from the extract
       d_domain, 
       dom_spec, 
-      consort,
+      platform_ids, 
+      removed_ids,
       cfg
     )
   }
@@ -183,16 +194,20 @@ count_all_domains <- function(consort, l_extract, cfg) {
 # PT_DomsPendingNow gives the exact pending domains and avoids assigning the
 # shared duration consent field to Part A or Part B.
 
-pending_domains_from_list <- function(consort) {
+pending_domains_from_list <- function(
+    domain_results,
+    d_pt_listing,
+    platform_ids,
+    removed_ids
+    ) {
   
-  domain_results = copy(consort$domain_results)
   
-  if (is.null(consort$pt_listing) || !"PT_DomsPendingNow" %in% names(consort$pt_listing)) {
+  if (is.null(d_pt_listing) || !"PT_DomsPendingNow" %in% names(d_pt_listing)) {
     message("PT_DomsPendingNow not present; the duration pending box will say unavailable.")
     return(list(domain_results = domain_results, n_duration_pending = NA_integer_))
   }
   
-  pending_long <- consort$pt_listing[, .(
+  pending_long <- d_pt_listing[, .(
     StudyPtID   = clean_code(StudyPtID),
     domain_code = str_to_upper(clean_code(PT_DomsPendingNow))
   )]
@@ -203,8 +218,8 @@ pending_domains_from_list <- function(consort) {
   pending_long[, domain_code := clean_code(domain_code)]
   pending_long <- pending_long[
     !is.na(StudyPtID) & !is.na(domain_code) &
-      StudyPtID %in% consort$platform_ids & 
-      !StudyPtID %in% consort$removed_ids]
+      StudyPtID %in% platform_ids & 
+      !StudyPtID %in% removed_ids]
   pending_long <- unique(pending_long, by = c("StudyPtID", "domain_code"))
   
   # Do not count an allocation as both revealed and pending in the same domain.

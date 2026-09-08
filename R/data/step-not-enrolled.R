@@ -1,5 +1,6 @@
 count_not_enrolled_reasons <- function(
-    d_screening, n_registry, n_not_eligible, cfg) {
+    d_screening, n_registry, n_not_eligible, cfg
+    ) {
   
   not_enrolled <- d_screening[outcome %in% c("Registry", "Not eligible")]
   n_not_enrolled <- nrow(not_enrolled)
@@ -13,8 +14,10 @@ count_not_enrolled_reasons <- function(
     values <- as.character(not_enrolled[[column]])
     sum(values %in% c("Yes", "TRUE", "1"))
   }
+  # exclusion_flags contains the column name that characterises a particular
+  # reason(s) for not being being enrolled
   exclusion_flags <- copy(cfg$data$d_excl_flags_spec)
-  # vapply is jhust the same as sapply but with a pre-spec rtn value
+  # sum up instances - same as sapply but with a pre-spec rtn value
   exclusion_flags[, n := vapply(column, count_flag, integer(1))]
   
   n_not_present <- sum(not_enrolled$presence == "No", na.rm = TRUE)

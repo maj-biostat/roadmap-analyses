@@ -4,6 +4,16 @@ Entry point is `data-main.R`
 
 Purpose is to extract source data from spiral extract to produce structures for consort dig and setup data for summaries.
 
+## Questions
+
++ How to determine whether 1s or 2s?
++ Why clean code applied repeatedly in place rather than once in global container (purpose for retaining original text)
++ Why temporary/copy fields rather than replace? Seems unnecessary in some places (but might be missing subtlety)
+
+## Refactor
+
++ Move all test code processing/removals to occur simultaneously?
+
 ## Config `config.R`
 
 Assumes extracts contained in folder of form: `data/xxxxx/YYYYMMDDHHMM` where xxxxx could be dummy data, raw extract etc.
@@ -50,5 +60,7 @@ Functionality identifies units that should not contribute to the platform popula
 MJ interpretation (might be wrong) of fields:
 
 `WD_Total_WithdrawAll` withdrawn from all domains?
+
+## Domains
 
 

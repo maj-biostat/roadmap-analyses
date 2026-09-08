@@ -192,6 +192,7 @@ reclassify_invalid_enrolments <- function(d_screening, w_list, rm_list) {
 
 
 reclassify_registry_removals <- function(d_screening, rm_list) {
+  
   if (length(rm_list$registry_ids) == 0) {
     return(d_screening[])
   }
