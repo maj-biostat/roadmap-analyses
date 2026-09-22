@@ -19,6 +19,9 @@ consort <- list()
 # Approximately equiv to Steps 1-3 - this locate exports, load and standardise screening data
 
 # Raw data, simply load and validate presence of some fields (utils-io.R)
+# config comes from sourcing config.R just tells us where to look for the data
+# and some mappings.
+# read_extract from utils-io.R
 l_extract <- read_extract(cfg)
 
 

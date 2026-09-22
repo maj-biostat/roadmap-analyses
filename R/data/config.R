@@ -1,13 +1,9 @@
 # Settings, constants and lookup tables - 
-#
 # Nothing in this file reads a file or does any computation - it just
 # keeeps everything in one place instead of scattered through script.
 # Some of it isn't used, but I tried to keep what I expect is necessary
 # at the moment.
 
-# Prefer data.table. 
-# i find that tidy changes too much which makes long term maint a bit of a 
-# headachec. I use some of the more stable tidy pkgs, e.g. here, stringr...
 library(data.table)
 # regex/string cleaning only - data.table handles the tables
 library(stringr)   
@@ -18,7 +14,7 @@ cfg <- list()
 
 cfg$report <- list(
   report_date = Sys.Date(),
-  extract_dttm = "202609021607"
+  extract_dttm = "202609021608"
 )
 
 cfg$data <- list(
@@ -132,6 +128,7 @@ cfg$data <- list(
 
 # mandatory cols for specific data extracts
 cfg$data$d_file_desc[, cols := vector("list", .N)]
+
 cfg$data$d_file_desc[
   name == "elig_plt", cols := c(
     "EligibilityCode", "EL_SiteCode", "EL_Outcome", "StudyPtID", 
