@@ -1,6 +1,6 @@
 # Data Extract
 
-Entry point is `data-main.R`
+Entry point is `data-consort.R`
 
 Purpose is to extract source data from spiral extract to produce structures for consort dig and setup data for summaries.
 
