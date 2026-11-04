@@ -1,15 +1,15 @@
 
 
-source(here::here("R/data", "config.R"))
-source(here::here("R/data", "utils-io.R"))
-source(here::here("R/data", "utils-clean.R"))
-source(here::here("R/data", "step-screening.R"))
-source(here::here("R/data", "step-removals.R"))
-source(here::here("R/data", "step-reconcile.R"))
-source(here::here("R/data", "step-not-enrolled.R"))
-source(here::here("R/data", "step-pt-listing.R"))
-source(here::here("R/data", "step-domains.R"))
-source(here::here("R/data", "step-summary.R"))
+source(here::here("R/data-consort", "config.R"))
+source(here::here("R/data-consort", "utils-io.R"))
+source(here::here("R/data-consort", "utils-clean.R"))
+source(here::here("R/data-consort", "step-screening.R"))
+source(here::here("R/data-consort", "step-removals.R"))
+source(here::here("R/data-consort", "step-reconcile.R"))
+source(here::here("R/data-consort", "step-not-enrolled.R"))
+source(here::here("R/data-consort", "step-pt-listing.R"))
+source(here::here("R/data-consort", "step-domains.R"))
+source(here::here("R/data-consort", "step-summary.R"))
 
 # `consort` is the single object that accumulates every result.
 consort <- list()
