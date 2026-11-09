@@ -230,6 +230,16 @@ last_1m <- function(v){
   v[length(v)-1]
 }
 
+# Parse dates such as "23-Jan-2026", optionally followed by a time. The month
+# abbreviation is matched against month.abb (always English) rather than using
+# as.Date(format = "%b") so the result does not depend on the session locale.
+parse_dmy_mon <- function(x){
+  x <- clean_text(x)
+  p <- str_match(x, "^(\\d{1,2})-([A-Za-z]{3})-(\\d{4})")
+  mon <- match(str_to_lower(p[, 3]), str_to_lower(month.abb))
+  as.Date(ISOdate(as.integer(p[, 4]), mon, as.integer(p[, 2])))
+}
+
 read_extract <- function(l_cfg){
   
   data_dir <- here::here(l_cfg$extract$data_dir)
@@ -873,6 +883,93 @@ baseline <- function(
   )
 }
 
+# Protocol deviations.
+# One row per recorded deviation; a participant can have more than one.
+# - Test sites and participants that are not in the randomised set (id_rand,
+#   from the screening step) are removed and listed in d_excl.
+# - Dates are parsed and the Yes/No fields are recoded to logical.
+# - Free text details/action taken, the user audit fields and the names of the
+#   people completing the form are not carried through to the derived data.
+# Deviations are recorded against the participant and the form has no domain
+# field, so there is no domain level attribution here.
+deviations <- function(
+    d_pd, id_rand,
+    test_codes = c("DS9")
+){
+  
+  n_raw <- nrow(d_pd)
+  message("PD: raw data has ", n_raw, " rows.")
+  
+  # the id and the form identifier must be usable
+  d_pd[, StudyPtID := clean_text(StudyPtID)]
+  stopifnot(!anyNA(d_pd$StudyPtID))
+  stopifnot(!anyNA(d_pd$PD_ID), !anyDuplicated(d_pd$PD_ID))
+  
+  d_pd[, id_prefix := sub("-.*$", "", StudyPtID)]
+  
+  # removals: test sites, then anyone that is not a randomised participant
+  d_pd[, reason_excl := fcase(
+    id_prefix %in% test_codes,   "test site",
+    !(StudyPtID %in% id_rand),   "not in randomised set",
+    default = NA_character_
+  )]
+  d_excl <- d_pd[!is.na(reason_excl), .(StudyPtID, PD_ID, reason_excl)]
+  d_pd <- d_pd[is.na(reason_excl)]
+  d_pd[, reason_excl := NULL]
+  
+  message(
+    "PD: removed ", sum(d_excl$reason_excl == "test site"), " test site rows and ",
+    sum(d_excl$reason_excl == "not in randomised set"), 
+    " rows for pts not in the randomised set; ", 
+    nrow(d_pd), " rows remain (", uniqueN(d_pd$StudyPtID), " pts)"
+  )
+  
+  yn <- function(x){
+    x <- str_to_lower(clean_text(x))
+    fcase(x == "yes", TRUE, x == "no", FALSE, default = NA)
+  }
+  
+  d_pd <- d_pd[, .(
+    StudyPtID,
+    id_prefix,
+    PD_ID,
+    protocol_version = clean_text(EL_ProtocolVersion),
+    complete         = yn(PD_Complete),
+    type             = clean_text(PD_Deviation_Type),
+    type_specify     = clean_text(PD_Deviation_TypeSpecify),
+    dt_deviation     = parse_dmy_mon(PD_Deviation_Date),
+    dt_completed     = parse_dmy_mon(PD_CompletedBy_Date),
+    data_integrity   = yn(PD_Outcome_DataIntegrity),
+    pt_safety        = yn(PD_Outcome_ParticipantSafety),
+    serious_breach   = yn(PD_Outcome_SeriousBreach),
+    tmt_agree        = yn(PD_Outcome_TrialMgmtTeamAgree)
+  )]
+  setorder(d_pd, dt_deviation, PD_ID)
+  
+  # report on anything unexpected rather than silently dropping it
+  if(anyNA(d_pd$type)){
+    message("PD: ", sum(is.na(d_pd$type)), " rows with no deviation type")
+  }
+  if(anyNA(d_pd$dt_deviation)){
+    message("PD: ", sum(is.na(d_pd$dt_deviation)), " rows with no valid deviation date")
+  }
+  n_incomplete <- d_pd[complete %in% FALSE, .N]
+  if(n_incomplete){
+    message("PD: ", n_incomplete, " rows with the form not complete")
+  }
+  
+  d_pd_smry <- d_pd[, .N, keyby = type]
+  for(j in seq_len(nrow(d_pd_smry))){
+    message("PD: ", d_pd_smry$type[j], ": ", d_pd_smry$N[j])
+  }
+  message("\n")
+  
+  list(
+    d_pd   = d_pd,
+    d_excl = d_excl
+  )
+}
+
 
 main <- function(){
   
@@ -949,12 +1046,21 @@ main <- function(){
   # d_tmp[, .N, keyby = .(trt, Sex)]
   
   
+  # call deviations 
+  l_pd <- deviations(
+    d_pd = copy(l_raw$prot_dev),
+    id_rand = l_dat$id_pt_plt,
+    test_codes = l_cfg$test_codes
+  )
+  
+  # add output of deviations to derived data.
   l_out <- list(
     l_raw = l_raw,
     l_dat = l_dat,
     l_pt = l_pt,
     l_dm = l_dm,
     l_bl = l_bl,
+    l_pd = l_pd,
     l_cfg = l_cfg
   )
   

@@ -726,6 +726,8 @@ for (i in seq_along(d_bl_cols)) {
 }
 ```
 
+## Participant characteristics
+
 Baseline characteristics are shown in @tbl-baseline for all randomised participants and for each arm within each domain. Participants appear in more than one domain column where they have been randomised within several domains. Continuous variables are summarised as the median (first and third quartiles) and categorical variables as the number (percentage) of participants with a recorded value. Missing values are counted separately. Participants with no baseline record are counted as missing for every variable.
 
 ```{=latex}
@@ -749,6 +751,188 @@ kbl(
   add_header_above(c(" " = 2, hdr_dm)) |>
   kable_styling(font_size = 7, latex_options = "repeat_header") |>
   column_spec(1, width = "5.9cm")
+```
+
+```{=latex}
+\end{landscape}
+```
+
+## Baseline microbiology
+
+```{r}
+#| label: micro-prep
+
+# Baseline microbiology is held in wide format in the baseline extract, with
+# up to three causative organisms per participant. As in baseline() in the
+# extract script it is reshaped to one row per participant and organism, but
+# here for all randomised participants so that the platform view is complete.
+# Participants with no organism have no rows.
+
+mic_cols <- grep("^BAS_Microbio_Org0[1-3]", names(d_bl_raw), value = TRUE)
+d_m <- d_bl_raw[, c("StudyPtID", mic_cols), with = FALSE]
+d_m[, (mic_cols) := lapply(.SD, as.character), .SDcols = mic_cols]
+
+d_org <- melt(
+  d_m, id.vars = "StudyPtID",
+  measure.vars = patterns(
+    name      = "^BAS_Microbio_Org0[1-3]OrganismName$",
+    specify   = "^BAS_Microbio_Org0[1-3]OrganismsSpecify$",
+    other     = "^BAS_Microbio_Org0[1-3]OrganismsSpecifyOther$",
+    pre_syn   = "^BAS_Microbio_Org0[1-3]Detected_PreOpSynovial$",
+    intra_syn = "^BAS_Microbio_Org0[1-3]Detected_IntraOpSynovial$",
+    intra_tis = "^BAS_Microbio_Org0[1-3]Detected_IntraOpTissue$",
+    blood     = "^BAS_Microbio_Org0[1-3]Detected_BloodCultures$"
+  ),
+  variable.name = "slot"
+)
+d_org[, label := bl_chr(name)]
+d_org <- d_org[!is.na(label)]
+det_cols <- c("pre_syn", "intra_syn", "intra_tis", "blood")
+d_org[, (det_cols) := lapply(.SD, function(v) tolower(bl_chr(v))), .SDcols = det_cols]
+
+# organisms per participant (an organism is counted once per participant)
+d_org_u <- unique(d_org[, .(StudyPtID, label)])
+d_norg  <- d_org_u[, .(n_org = .N), by = StudyPtID]
+
+# consistency of the identified flag, the amount and the organism entries
+d_chk <- merge(
+  d_c[, .(StudyPtID, ident = BAS_Microbio_CausativeOrganismIdentified)],
+  merge(d_norg, d_bl_raw[, .(StudyPtID, amount = suppressWarnings(as.numeric(BAS_Microbio_CausativeOrganismAmount)))],
+        by = "StudyPtID", all = TRUE),
+  by = "StudyPtID", all.x = TRUE
+)
+d_chk[is.na(n_org), n_org := 0L]
+n_yes_none  <- d_chk[ident %in% "Yes" & n_org == 0, .N]
+n_org_notyes <- d_chk[!(ident %in% "Yes") & n_org > 0, .N]
+n_amt_diff  <- d_chk[ident %in% "Yes" & n_org > 0 & !is.na(amount) & amount != n_org, .N]
+if (n_yes_none + n_org_notyes + n_amt_diff > 0) {
+  cat("CHECK: microbiology: identified = Yes with no organism recorded:", n_yes_none,
+      "; organism recorded without identified = Yes:", n_org_notyes,
+      "; amount differs from number of organisms recorded:", n_amt_diff, "\n", file = stderr())
+}
+
+tex_esc <- function(x) gsub("([&%$#_{}])", "\\\\\\1", x)
+
+# organism rows: S. aureus (any) with its subtypes, then the other organisms,
+# ordered by the number of platform participants
+ids_yes_all <- d_c[BAS_Microbio_CausativeOrganismIdentified %in% "Yes", StudyPtID]
+org_freq <- d_org_u[StudyPtID %in% ids_yes_all, .N, by = label][order(-N, label)]
+lab_sau  <- org_freq[grepl("aureus", label, ignore.case = TRUE), label]
+lab_oth  <- setdiff(org_freq$label, lab_sau)
+
+org_def <- rbind(
+  if (length(lab_sau) > 0) data.table(
+    label = "Staphylococcus aureus (any)", members = list(lab_sau), indent = 1L),
+  if (length(lab_sau) > 0) data.table(label = lab_sau, members = as.list(lab_sau), indent = 2L),
+  if (length(lab_oth) > 0) data.table(label = lab_oth, members = as.list(lab_oth), indent = 1L)
+)
+
+mic_rows <- function(ids) {
+  x <- merge(
+    d_c[StudyPtID %in% ids,
+        .(StudyPtID, has_bl, ident = BAS_Microbio_CausativeOrganismIdentified)],
+    d_norg, by = "StudyPtID", all.x = TRUE
+  )
+  x[is.na(n_org), n_org := 0L]
+  n_ok    <- sum(!is.na(x$ident))
+  n_yes   <- sum(x$ident %in% "Yes")
+  ids_yes <- x[ident %in% "Yes", StudyPtID]
+  o       <- d_org_u[StudyPtID %in% ids_yes]
+  n_with  <- function(k) sum(x$ident %in% "Yes" & x$n_org == k)
+
+  rbind(
+    data.table(label = "Randomised, n", val = fmt_n(nrow(x))),
+    data.table(label = "Baseline form received, n (\\%)", val = n_pct(sum(x$has_bl), nrow(x))),
+    data.table(label = "\\textbf{Causative organism identified, n (\\%)}", val = ""),
+    data.table(
+      label = paste0(ind, c("Yes", "No")),
+      val   = c(n_pct(n_yes, n_ok), n_pct(sum(x$ident %in% "No"), n_ok))
+    ),
+    data.table(label = paste0(ind, "Missing, n"), val = fmt_n(sum(is.na(x$ident)))),
+    data.table(label = "\\textbf{Organisms recorded, n (\\%) of those with an organism identified}", val = ""),
+    data.table(
+      label = paste0(ind, c("1", "2", "3", "None recorded")),
+      val   = vapply(c(1, 2, 3, 0), function(k) n_pct(n_with(k), n_yes), "")
+    ),
+    data.table(label = "\\textbf{Organism, n (\\%) of those with an organism identified}", val = ""),
+    data.table(
+      label = paste0(strrep(ind, org_def$indent), tex_esc(org_def$label)),
+      val   = vapply(org_def$members, function(m) n_pct(o[label %in% m, uniqueN(StudyPtID)], n_yes), "")
+    )
+  )
+}
+
+d_mic_cols <- lapply(grp_ids, mic_rows)
+d_mic_tab  <- data.table(Characteristic = d_mic_cols[[1]]$label)
+for (i in seq_along(d_mic_cols)) set(d_mic_tab, j = paste0("g", i), value = d_mic_cols[[i]]$val)
+```
+
+Baseline microbiology is summarised for all randomised participants (@tbl-micro-site) and for each arm within each domain (@tbl-micro). A participant has a causative organism identified when this is recorded as Yes; up to three organisms can be recorded for a participant. Organism counts are numbers of participants, so a participant with more than one organism is counted against each and the percentages can sum to more than 100%. Percentages for the number of organisms and for each organism are of participants with a causative organism identified. *Staphylococcus aureus* (any) combines the methicillin resistant, methicillin susceptible and penicillin susceptible categories. Species recorded in the specify fields are not tabulated separately.
+
+@tbl-micro-site shows where each organism was detected, across all randomised participants. Each row counts organism records, so a participant with several organisms contributes several records, and a record can be positive in more than one type of sample.
+
+```{r}
+#| label: tbl-micro-site
+#| tbl-cap: "Baseline organism records by type of sample in which the organism was detected (all randomised participants)."
+#| tbl-pos: 'H'
+
+det_cell <- function(v) {
+  n_ok <- sum(!is.na(v))
+  if (n_ok == 0) return("--")
+  k <- sum(v == "yes", na.rm = TRUE)
+  paste0(k, " (", fmt_pct(k / n_ok, 0), ")")
+}
+
+d_site_org <- d_org[, c(
+  list(Records = .N),
+  lapply(.SD, det_cell)
+), by = label, .SDcols = det_cols]
+d_site_org <- merge(d_site_org, org_freq[, .(label, N)], by = "label", all.x = TRUE)
+d_site_org[is.na(N), N := 0L]
+setorder(d_site_org, -Records, label)
+
+d_site_tot <- d_org[, c(list(label = "All organism records", Records = .N), lapply(.SD, det_cell)),
+                    .SDcols = det_cols]
+
+d_site_org_tab <- rbind(
+  d_site_org[, c("label", "Records", det_cols), with = FALSE],
+  d_site_tot, use.names = TRUE
+)
+d_site_org_tab[, Records := fmt_n(Records)]
+
+kbl(
+  d_site_org_tab, format = "latex", booktabs = TRUE, align = "lrrrrr", linesep = "",
+  col.names = c("Organism", "Records", "Pre-op synovial", "Intra-op synovial",
+                "Intra-op tissue", "Blood cultures")
+) |>
+  add_header_above(c(" " = 2, "Detected in, n (% of records)" = 4)) |>
+  kable_styling(font_size = 8) |>
+  column_spec(1, width = "6.4cm") |>
+  row_spec(nrow(d_site_org_tab) - 1, extra_latex_after = "\\midrule") |>
+  row_spec(nrow(d_site_org_tab), bold = TRUE)
+```
+
+The summary by domain and arm follows in @tbl-micro.
+
+```{=latex}
+\begin{landscape}
+\setlength{\tabcolsep}{3pt}
+```
+
+```{r}
+#| label: tbl-micro
+#| tbl-cap: "Baseline microbiology of randomised participants: platform and by domain and arm."
+#| tbl-pos: 'H'
+
+kbl(
+  d_mic_tab, format = "latex", booktabs = TRUE, longtable = TRUE, escape = FALSE,
+  align = c("l", rep("r", length(grp_ids))),
+  col.names = c("", grp_nm),
+  linesep = ""
+) |>
+  add_header_above(c(" " = 2, hdr_dm)) |>
+  kable_styling(font_size = 7, latex_options = "repeat_header") |>
+  column_spec(1, width = "7.5cm")
 ```
 
 ```{=latex}
@@ -871,10 +1055,197 @@ ggplot(d_fig, aes(N, arm_lab, fill = status)) +
   labs(x = "Proportion of participants", y = NULL)
 ```
 
+
+# Protocol deviations
+
+```{r}
+#| label: pd-prep
+
+if (!("l_pd" %in% names(l_out))) {
+  stop("The derived data has no protocol deviation output (l_pd). ",
+       "Re-run R/data-analysis/data-analysis.R to create it.")
+}
+
+# deviations are recorded against the participant. Use the same set of
+# randomised participants as the rest of the report so denominators agree.
+d_pd <- l_out$l_pd$d_pd[StudyPtID %in% d_pt$StudyPtID]
+n_pd_out <- l_out$l_pd$d_pd[StudyPtID %in% ids_rand & !(StudyPtID %in% d_pt$StudyPtID), .N]
+if (n_pd_out > 0) {
+  cat("CHECK: ", n_pd_out, " deviations for randomised participants not in the participant list\n",
+      file = stderr())
+}
+d_pd[, type := fifelse(is.na(type), "Not recorded", type)]
+
+n_pd      <- nrow(d_pd)
+n_pd_pt   <- uniqueN(d_pd$StudyPtID)
+n_pd_site <- uniqueN(d_pd$id_prefix)
+n_pd_inc  <- d_pd[complete %in% FALSE, .N]
+n_pd_sb   <- d_pd[serious_breach %in% TRUE, .N]
+```
+
+Protocol deviations are recorded against a participant on a deviation form. Participants can have more than one deviation. Records from test sites are excluded.
+
+```{r}
+#| output: asis
+
+if (n_pd == 0) {
+  cat("No protocol deviations have been recorded for randomised participants as at the data extract.\n")
+} else {
+  cat(sprintf(
+    paste0(
+      "As at the data extract, %s protocol deviations had been recorded for %s randomised ",
+      "participants (%s of those randomised) from %s sites. %s of the deviation forms ",
+      "were not complete and %s %s recorded as a serious breach. ",
+      "@tbl-pd-type summarises the deviations by type and recorded outcome, @fig-pd-time ",
+      "shows when they occurred, and @tbl-pd-arm shows the participants affected on the ",
+      "platform and within each domain and arm.\n"
+    ),
+    fmt_n(n_pd), fmt_n(n_pd_pt), fmt_pct(n_pd_pt / n_rand, 1), n_pd_site,
+    fmt_n(n_pd_inc), fmt_n(n_pd_sb), if (n_pd_sb == 1) "was" else "were"
+  ))
+}
+```
+
+```{r}
+#| label: tbl-pd-type
+#| tbl-cap: "Protocol deviations by type and recorded outcome."
+#| tbl-pos: 'H'
+#| eval: !expr n_pd > 0
+
+pd_cell <- function(k, n) paste0(k, " (", fmt_pct(k / n, 0), ")")
+pd_row <- function(x, label) {
+  n <- nrow(x)
+  data.table(
+    Type = label,
+    Deviations = fmt_n(n),
+    Participants = fmt_n(uniqueN(x$StudyPtID)),
+    di  = pd_cell(sum(x$data_integrity %in% TRUE), n),
+    ps  = pd_cell(sum(x$pt_safety %in% TRUE), n),
+    sb  = pd_cell(sum(x$serious_breach %in% TRUE), n),
+    tmt = pd_cell(sum(x$tmt_agree %in% TRUE), n)
+  )
+}
+
+pd_types <- d_pd[, .N, by = type][order(-N, type)]$type
+pd_rows  <- list()
+pd_sub   <- integer()   # row numbers of indented sub-rows
+for (tp in pd_types) {
+  x <- d_pd[type == tp]
+  pd_rows[[length(pd_rows) + 1]] <- pd_row(x, tp)
+  # where a type has a specified category, show the categories beneath it
+  if (x[, any(!is.na(type_specify))]) {
+    x[, spec := fifelse(is.na(type_specify), "Not specified", type_specify)]
+    for (sp in x[, .N, by = spec][order(-N, spec)]$spec) {
+      pd_rows[[length(pd_rows) + 1]] <- pd_row(x[spec == sp], sp)
+      pd_sub <- c(pd_sub, length(pd_rows))
+    }
+  }
+}
+d_pd_tab <- rbindlist(pd_rows)
+d_pd_tab <- rbind(d_pd_tab, pd_row(d_pd, "All deviations"))
+
+# the header uses line breaks, so the cells are escaped here instead of by kbl
+d_pd_tab[, Type := tex_esc(Type)]
+pct_cols <- c("di", "ps", "sb", "tmt")
+d_pd_tab[, (pct_cols) := lapply(.SD, function(z) gsub("%", "\\%", z, fixed = TRUE)), .SDcols = pct_cols]
+
+kbl(
+  d_pd_tab, format = "latex", booktabs = TRUE, escape = FALSE, align = "lrrrrrr", linesep = "",
+  col.names = linebreak(
+    c("Type", "Deviations", "Partici-\npants", "Data\nintegrity",
+      "Participant\nsafety", "Serious\nbreach", "TMT\nagrees"),
+    align = "c"
+  )
+) |>
+  add_header_above(c(" " = 3, "Recorded as Yes, n (% of deviations)" = 4)) |>
+  kable_styling(font_size = 8) |>
+  column_spec(1, width = "4.6cm") |>
+  add_indent(pd_sub) |>
+  row_spec(nrow(d_pd_tab) - 1, extra_latex_after = "\\midrule") |>
+  row_spec(nrow(d_pd_tab), bold = TRUE) |>
+  footnote(
+    general = paste(
+      "TMT agrees: the trial management team agrees that the event constitutes a protocol deviation.",
+      "Outcomes that are not recorded (for example on incomplete forms) are not counted as Yes."
+    ),
+    general_title = "Note: ", threeparttable = TRUE
+  )
+```
+
+```{r}
+#| label: fig-pd-time
+#| fig-cap: "Protocol deviations by month of deviation and type."
+#| fig-width: 6.5
+#| fig-height: 3
+#| eval: !expr n_pd > 0
+
+pd_x0 <- min(month_start(dt_first), month_start(min(d_pd$dt_deviation, na.rm = TRUE)))
+d_pd_m <- data.table(month = seq(pd_x0, month_start(dt_cut), by = "month"))
+d_pd_n <- d_pd[!is.na(dt_deviation), .N, by = .(month = month_start(dt_deviation), type)]
+d_pd_n[, type := factor(type, levels = pd_types)]
+
+ggplot(d_pd_n, aes(month, N, fill = type)) +
+  geom_col(width = 25) +
+  scale_x_date(
+    limits = c(pd_x0 - 15, dt_cut), date_breaks = "3 months", date_labels = "%b\n%Y"
+  ) +
+  scale_y_continuous(
+    breaks = function(l) { b <- pretty(l); b[b == floor(b)] },
+    expand = expansion(mult = c(0, 0.08))
+  ) +
+  scale_fill_manual(
+    values = setNames(c("#0072B2", "#E69F00", "#009E73", "#999999")[seq_along(pd_types)], pd_types),
+    name = NULL
+  ) +
+  labs(x = "Month of deviation", y = "Deviations")
+```
+
+```{r}
+#| label: tbl-pd-arm
+#| tbl-cap: "Participants with at least one protocol deviation: platform and by domain and arm."
+#| tbl-pos: 'H'
+#| eval: !expr n_pd > 0
+
+pd_grp <- function(ids) {
+  x <- d_pd[StudyPtID %in% ids]
+  k <- uniqueN(x$StudyPtID)
+  data.table(
+    n = fmt_n(length(ids)),
+    k = paste0(fmt_n(k), " (", fmt_pct(k / length(ids), 1), ")"),
+    dev = fmt_n(nrow(x))
+  )
+}
+
+d_pd_arm <- rbindlist(c(
+  list(cbind(data.table(Domain = "Platform", Arm = "All randomised"), pd_grp(d_pt$StudyPtID))),
+  lapply(seq_len(nrow(d_arm)), function(i) {
+    cbind(
+      data.table(Domain = as.character(d_arm$dm_lab[i]), Arm = d_arm$arm[i]),
+      pd_grp(d_dm[dm == d_arm$dm[i] & arm == d_arm$arm[i], StudyPtID])
+    )
+  })
+))
+
+kbl(
+  d_pd_arm, format = "latex", booktabs = TRUE, align = "llrrr",
+  col.names = c("Domain", "Arm", "Randomised", "With a deviation, n (%)", "Deviations")
+) |>
+  kable_styling(font_size = 9) |>
+  collapse_rows(columns = 1, latex_hline = "major", valign = "top") |>
+  footnote(
+    general = paste(
+      "Deviations are recorded against the participant and are not attributed to a domain.",
+      "A participant randomised within more than one domain appears in each."
+    ),
+    general_title = "Note: ", threeparttable = TRUE
+  )
+```
+
 <!--
 Planned sections (not yet populated):
   - CONSORT diagram
   - Study withdrawal
-  - Protocol deviations (no data yet)
   - Safety reporting (limited per protocol; scope to be agreed)
 -->
+
+
