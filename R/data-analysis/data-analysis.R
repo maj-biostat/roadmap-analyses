@@ -10,6 +10,10 @@ library(lubridate)
 
 source(here::here("R/data-analysis", "utils.R"))
 
+
+# Config ------
+
+
 l_cfg <- list()
 
 l_cfg$version <- list(
@@ -169,7 +173,114 @@ l_cfg$bl$nms_bl[, col_to := sub("BAS_OKS", "oks", col_to)]
 l_cfg$bl$nms_bl[, col_to := sub("BAS_EQ5D5L", "qol", col_to)]
 
 
-test_codes = c("DS9")
+l_cfg$test_codes = c("DS9")
+
+
+# Utils --------
+
+fname_to_label <- function(x = NULL){
+  if(is.null(x)) return(NULL)
+  if(is.na(x)) return(NULL)
+  x_out <- sub("\\.csv$", "", x)
+  x_out <- gsub("-", "_", x_out, fixed = TRUE)
+  x_out
+}
+
+
+# Trim/squish whitespace and turn tokens into NA. 
+# Replaces all internal gaps with single spaces.
+clean_text <- function(
+    x, 
+    tokens_to_na = "", 
+    case_sensitive = FALSE
+) {
+  
+  x <- stringr::str_squish(as.character(x))
+  
+  if(!case_sensitive){
+    x[!is.na(x) & str_to_lower(x) %in% tokens_to_na] <- NA_character_
+  } else {
+    x[!is.na(x) & x %in% tokens_to_na] <- NA_character_
+  }
+  x
+}
+
+drop_na <- function(x) {
+  x[!is.na(x)]
+}
+
+
+stop_duplicate <- function(x, msg = ""){
+  if (any(duplicated(x))) {
+    stop(paste0("Duplicated code", msg))
+  }
+}
+
+
+push_l <- function(l, value){
+  l[length(l)+1] <- value
+  l
+}
+
+pull_last <- function(l){
+  l[length(l)]
+}
+
+last_1m <- function(v){
+  if(length(v)<2) return(NULL)
+  v[length(v)-1]
+}
+
+read_extract <- function(l_cfg){
+  
+  data_dir <- here::here(l_cfg$extract$data_dir)
+  
+  v_fnames <- list.files(
+    data_dir,  pattern = "\\.csv$", full.names = F
+  )
+  
+  stopifnot(length(v_fnames) == l_cfg$extract$num_files)
+  
+  l_raw <- list()
+  
+  i = 1
+  for(i in seq_along(v_fnames)){
+    f <- v_fnames[i]
+    
+    lab <- fname_to_label(f)
+    
+    l_raw[[lab]] <- fread(file = here(data_dir, basename(f)))
+    
+    # check_columns(
+    #   d_file_desc$prefix[i],
+    #   cfg$data$d_file_desc$cols[i][[1]],
+    #   names(l_data_raw[[d_file_desc$name[i]]])
+    # )
+    
+  }
+  
+  # if(cfg$data$verbose){
+  #   
+  #   message("Extract data date: ", 
+  #           lubridate::as_date(substr(basename(dir_data_raw), 1, 8)), 
+  #           " label ",
+  #           cfg$report$extract_dttm)
+  #   
+  #   dat_names <- names(l_data_raw)
+  #   for(i in 1:length(l_data_raw)){
+  #     message("Dataset: ", dat_names[i], " ncol ", ncol(l_data_raw[[i]]), 
+  #             " nrow ", nrow(l_data_raw[[i]]))
+  #   }
+  #   
+  # }
+  
+  l_raw
+  
+}
+
+
+
+# Processing ---------
 
 # Each removal file has three cols. My understanding is that these relate to
 # screening rows, platform participants and registry participants and detail
@@ -249,7 +360,8 @@ proc_withdrawals <- function(
 
 # clean up the screening (platform eligibility) data
 screening <- function(
-    d_scr, d_rm, d_wd
+    d_scr, d_rm, d_wd,
+    test_codes = c("DS9")
                       ){
   l_dat <- list()
   
@@ -477,7 +589,8 @@ participants <- function(
 
 domain <- function(
     d_dm, l_dm_def, 
-    d_rand, d_pt_list
+    d_rand, d_pt_list,
+    test_codes = c("DS9")
 ){
   
   # no na allowed in rand set
@@ -734,8 +847,8 @@ main <- function(){
     d_rm  = copy(l_raw$removals), 
     d_wd = copy(l_raw$wd)
     )
-  names(l_dat)
-  nrow(l_dat$d_rand)
+  # names(l_dat)
+  # nrow(l_dat$d_rand)
   
 
   # participant list (contains trt allocation arms)
@@ -783,27 +896,23 @@ main <- function(){
   })
   names(l_bl) <- dm_names
   
+  l_out <- list(
+    l_raw = l_raw,
+    l_dat = l_dat,
+    l_pt = l_pt,
+    l_dm = l_dm,
+    l_bl = l_bl,
+    l_cfg = l_cfg
+  )
   
+  dir_out <- here::here("data/derived", l_cfg$version$extract_dttm)
+  dir.create(dir_out, showWarnings = FALSE, recursive = TRUE)
+  f_out <- paste0("dat-", format(Sys.time(), "%Y%m%d-%H%M%S"), ".qs2")
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  # protocol deviations
-  
-  
-  
-  # safety - deaths, sae
-  
-  
-  
+  qs2::qs_save(
+    l_out,
+    file = here::here(dir_out, f_out)
+  )
   
   
 }
