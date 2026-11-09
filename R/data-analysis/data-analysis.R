@@ -8,7 +8,6 @@ library(stringr)
 library(here)
 library(lubridate)
 
-source(here::here("R/data-analysis", "utils.R"))
 
 
 # Config ------
@@ -315,14 +314,8 @@ proc_removals <- function(
 }
 
 
-# process removals data
-
-# each removal file has three cols which relate to
-# screening rows, 
-# platform participants and 
-# registry participants 
-# c("eligibility-code", "platform-code", "registry-code")
-# respectively which allow for selectively removing units from each dataset.
+# Clean and recode the withdrawal data, reporting on duplicate participant
+# entries.
 proc_withdrawals <- function(
     d_wd,
     cols = c("StudyPtID", "WD_Total_WithdrawAll", "WD_Reason")
@@ -335,6 +328,7 @@ proc_withdrawals <- function(
   # Indicator for Withdraw from all aspects of the ROADMAP Trial
   d_wd[, wd_all := str_to_lower(clean_text(WD_Total_WithdrawAll))]
   d_wd[, reason := str_to_lower(clean_text(WD_Reason))]
+  # recode the reason
   d_wd[, reason_grp := fcase(
     str_starts(reason, "enrolled in error"), "invalid_enrolment",
     str_starts(reason, "invalid consent"), "invalid_enrolment",
@@ -343,9 +337,9 @@ proc_withdrawals <- function(
     default = "other"
   )]
   
-  
-  if(any(d_wd[, .N, keyby = StudyPtID][[2]] > 1)){
-    n_dup <- d_wd[, .N, keyby = StudyPtID][N > 1, .N]
+  # 
+  n_dup <- d_wd[, .N, keyby = StudyPtID][N > 1, .N]
+  if(n_dup){
     message("WD: contains ", n_dup, " duplicate StudyPtIDs")
   }
   
@@ -358,7 +352,9 @@ proc_withdrawals <- function(
   )
 }
 
-# clean up the screening (platform eligibility) data
+# Clean up the screening (platform eligibility) data
+# The intended structure of the screening steps is opaque. I have largely followed
+# what I believe the intent of the consort generation script did from Jess Massie.
 screening <- function(
     d_scr, d_rm, d_wd,
     test_codes = c("DS9")
@@ -368,11 +364,11 @@ screening <- function(
   # in contrast to the JM consort script, first I identify the removal records
   # and withdrawals before processing the screen (plt_elig) data
   
-  # removals (step) - just picks up the eligibility, platform and registry codes
+  # removals (step) - picks up the eligibility, platform and registry codes
   # for removal (if there are any)
   l_dat[["rm"]] <- proc_removals(d_rm)
   
-  # withdrawals - identifies those that are withdrawn
+  # withdrawals - identifies those that have withdrawn
   l_dat[["wd"]] <- proc_withdrawals(d_wd)
   
   v_n <- c(nrow(d_scr))
@@ -448,8 +444,11 @@ screening <- function(
   
   # <unrecognised> not permitted
   stopifnot(!any(d_scr$presence %in% "<unrecognised>"))
-  # completed outcome but no physical-presence value.
-  stopifnot(!any(is.na(d_scr$presence) & !is.na(d_scr$outcome)))
+  # completed outcome but no physical-presence value wouldn't make sense so stop
+  stopifnot(!any(
+    is.na(d_scr$presence) &  # presence was not set
+      !is.na(d_scr$outcome)  # but they had an outcome other than NA
+    ))
   
   # check for duplicated StudyPtID (possible and valid under re-rand)
   n_dup <- d_scr[!is.na(StudyPtID) & duplicated(StudyPtID), .N]
@@ -467,9 +466,13 @@ screening <- function(
           " rows, ", last_1m(v_n) - last(v_n), " dropped")
   
   
-  # now check the withdrawals for the existence of invalid ids
+  # Now check the withdrawals for the existence of invalid ids. These are
+  # ids that were listed in the removals.csv file presumably independently
+  # from what is in the spiral db.
   ids_invalid_from_wd <- l_dat[["wd"]]$d_wd[
     reason_grp == "invalid_enrolment" & wd_all == "yes", StudyPtID]
+  # Select all the records from WD that were tagged as invalid_enrolment and
+  # all those from the removals file platform-code field
   id_invalid_enrl <- union(ids_invalid_from_wd, l_dat[["rm"]]$plt_code)
   
   if(length(id_invalid_enrl)){
@@ -478,7 +481,7 @@ screening <- function(
             " found ", n_found, " reclass outcome as Not eligible")
     d_scr[StudyPtID %in% id_invalid_enrl, outcome := "Not eligible" ]
     
-    l_dat$d_rand <- l_dat$d_rand[]
+    # l_dat$d_rand <- l_dat$d_rand[]
   }
   
   
@@ -493,13 +496,14 @@ screening <- function(
   }
   
   # original participant IDs and randomised set
-  l_dat[["d_rand"]] <- d_scr[
+  l_dat$d_rand <- d_scr[
     !is.na(StudyPtID) &
       !(EligibilityCode %in% l_dat[["rm"]]$elig_code) &
       !(StudyPtID %in% ids_invalid_from_wd), 
     .SD[1], keyby = StudyPtID]
   
-  stopifnot(nrow(l_dat[["d_rand"]]) == sum(d_scr$outcome == "Randomised", na.rm = TRUE))
+  
+  stopifnot(nrow(l_dat$d_rand) == sum(d_scr$outcome == "Randomised", na.rm = TRUE))
   
   
   l_dat$n_screened <- nrow(d_scr)                                            # D
@@ -534,12 +538,22 @@ screening <- function(
     outcome == "Randomised" & !is.na(StudyPtID), 
     .SD[1], keyby = StudyPtID]$StudyPtID
   
+  attr(l_dat$id_pt_plt, "label") <- paste(
+    "Vector of randomised participants after removals have been processed",
+    "for the screening data"
+  )
+  # attr(l_dat$id_pt_plt, "label")
+  
   l_dat$d_screening <- copy(d_scr)
   
   l_dat
 }
 
 
+# Todo check interpretation....
+# The participants data contains the domain level randomisation and the 
+# consent, baseline, day 100, day 365  completion indicator as well as
+# the withdrawal form status.
 participants <- function(
     d_pt_list, d_rand,
     test_codes = c("DS9")
@@ -547,7 +561,7 @@ participants <- function(
   
   
   v_n <- c(nrow(d_pt_list))
-  message("Pts: original has ",   last(v_n), " rows.")
+  message("Pts: raw data has ",   last(v_n), " rows.")
   
   cols <- c(
     "StudyPtID"
@@ -576,7 +590,13 @@ participants <- function(
   # elements that are in the first dataset but NOT in the second dataset.
   missing_from_list <- setdiff(ids_rand, ids_pt)
   if(length(missing_from_list)){
-    message("Pts: ", length(missing_from_list), " pts from screening not in pt list")
+    msg <- paste(
+      "Pts:", 
+      length(missing_from_list), 
+      "pts from screening not in pt list"
+    )
+    msg <- paste(msg, "(", paste(missing_from_list, collapse = ", "), ")")
+    message(msg)
   }
   
   # return processed set
@@ -631,7 +651,7 @@ domain <- function(
   }
   
   
-  # multiple outcomes per pt
+  # are there any multiple outcomes per pt?
   d_dm_tmp <- unique(d_dm[, .(StudyPtID, EL_Outcome)])
   n_mult_outcome <- d_dm_tmp[, .N, keyby = StudyPtID][N>1, .N]
   if(n_mult_outcome){
@@ -663,7 +683,8 @@ domain <- function(
   # merge in the trt allocation arm:
   d_dm <- base::merge(
     d_dm, d_pt_list[, c("StudyPtID", l_dm_def$trt_col), with = F], 
-    by = "StudyPtID", all.x = T)
+    by = "StudyPtID", all.x = T
+    )
   trt_lu <- unlist(l_dm_def$trt_map)
   d_dm[, trt := unname(trt_lu[match(d_dm[[l_dm_def$trt_col]], names(trt_lu))])]
   
@@ -683,7 +704,27 @@ domain <- function(
   
   n_dm <- d_dm[, .N]
   n_dm_rand <- d_dm[EL_Outcome %in% "Randomised", .N]
-  message("Domain: ", n_dm, " remain in domain ", n_dm_rand, " rand")
+  # all those from pt list with non NA value for domain allocation.
+  d_pt_list_dm <- d_pt_list[ 
+    !is.na(get(l_dm_def$trt_col)), c("StudyPtID", l_dm_def$trt_col), with = F]
+  n_dm_rand_pt_list <- nrow(d_pt_list_dm)
+  
+  # These are in the pt list but do not appear in the domain data
+  d_pt_list_mis <- d_pt_list_dm[!(StudyPtID %in% d_dm[EL_Outcome == "Randomised", StudyPtID])]
+  n_dm_rand_mis <- nrow(d_pt_list_mis)
+
+  msg <- paste(
+    "Domain:", 
+    n_dm, "remain in domain", 
+    n_dm_rand, "of these are revealed to rand",
+    n_dm_rand_pt_list, "in the pt list for this domain",
+    "(", n_dm_rand_mis, "missing)"
+  )
+  message(msg)
+  
+  for(j in 1:nrow(d_pt_list_mis)){
+    cat("Pt list id missing from domain ", d_pt_list_mis[j, StudyPtID], "\n")
+  }
   
   d_dm_smry <- d_dm[, .N, keyby = .(EL_Outcome, trt)]
   for(j in 1:nrow(d_dm_smry)){
@@ -837,7 +878,7 @@ main <- function(){
   
   # Load raw data (utils.R)
   l_raw <- read_extract(l_cfg)
-  names(l_raw)
+  # names(l_raw)
   
   
   # always copy from here otherwise you will change the raw data due
@@ -862,6 +903,7 @@ main <- function(){
   d_rand <- copy(l_dat$d_rand)
   d_pt_list <- copy(l_pt$d_pt_list)
   dm_names <- names(l_cfg$dm_defn)
+  dm <- "SD"
   l_dm <- lapply(dm_names, function(dm){
     l_dm_def <- l_cfg$dm_defn[[dm]]
     d_dm <- copy(l_raw[[l_dm_def$ref]])
@@ -895,6 +937,17 @@ main <- function(){
     baseline(copy(l_raw[["baseline"]]),  d_dm, l_dm_def)
   })
   names(l_bl) <- dm_names
+  
+  
+  
+  # d_tmp <- merge(
+  #   l_dm$SD[EL_Outcome == "Randomised" & !is.na(trt), .(StudyPtID, EL_Outcome, trt)], 
+  #   l_bl$SD$d_bl, all.x = T, by = "StudyPtID"
+  # )
+  # names(d_tmp)
+  # d_tmp[, median(Age, na.rm = T), keyby = trt]
+  # d_tmp[, .N, keyby = .(trt, Sex)]
+  
   
   l_out <- list(
     l_raw = l_raw,

@@ -1,9 +1,11 @@
 # Data - Analysis
 
-Data processing for analysis.
+The analysis reports are based on pre-processing extracts from spiral which dump data in a usable form into the derived directory. 
 
-The file extract produces a set of files per the following table, which are then renamed so that they can be easily referenced within the data processing scripts.
-Each of the datasets are stored within a list indexed by their expected filename (minus the .csv).
+The analysis file (`data-analysis.R`) should be configured based on the current extract and `main` invoked to create the necessary data sets.
+
+For convenience, the extract files are renamed per the following table. 
+These are then stored within the `l_raw` list object under the new filenames.
 
 The files are stored in a folder under the data directory which is named according to the extract date, e.g. `202609021608`
 
@@ -26,4 +28,5 @@ The files are stored in a folder under the data directory which is named accordi
 | Withdrawal - Trial export_2026-09-02_1607.csv | wd.csv |   |
 | - | removals.csv | Used for overriding data in extract 
 
+For now, the processing is fairly rudimentary.
 

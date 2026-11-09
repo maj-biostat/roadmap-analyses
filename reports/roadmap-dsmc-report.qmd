@@ -1,0 +1,880 @@
+---
+title: "ROADMAP"
+subtitle: "Data and Safety Monitoring Committee Report 1"
+format:
+  pdf:
+    documentclass: article
+    papersize: a4
+    fontsize: 10pt
+    geometry:
+      - margin=2.2cm
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    colorlinks: true
+    fig-pos: "H"
+    tbl-pos: "H"
+    fig-dpi: 200
+    keep-tex: true
+    include-in-header:
+      text: |
+        \usepackage{fancyhdr}
+        \usepackage{float}
+        \usepackage{booktabs}
+        \usepackage{pdflscape}
+        \newcommand{\datacut}{}
+        \pagestyle{fancy}
+        \fancyhf{}
+        \fancyhead[L]{\small ROADMAP DSMC Report 1}
+        \fancyhead[R]{\small \datacut}
+        \fancyfoot[L]{\small Confidential: for DSMC use only}
+        \fancyfoot[R]{\small Page \thepage}
+        \renewcommand{\headrulewidth}{0.3pt}
+        \fancypagestyle{plain}{%
+          \fancyhf{}
+          \fancyhead[R]{\small \datacut}
+          \fancyfoot[L]{\small Confidential: for DSMC use only}
+          \fancyfoot[R]{\small Page \thepage}
+          \renewcommand{\headrulewidth}{0pt}
+        }
+execute:
+  echo: false
+  warning: false
+  message: false
+params:
+  # extract folder under data/derived/ (and data/dummy/)
+  extract_dttm: "202609021608"
+  # derived file name; leave empty to use the most recent dat-*.qs2 in the folder
+  derived_file: ""
+---
+
+```{r}
+#| label: setup
+
+library(data.table)
+library(ggplot2)
+library(patchwork)
+library(kableExtra)
+library(here)
+
+# ---- Load derived data ------------------------------------------------------
+# Standalone: reads the output of R/data-analysis/data-analysis.R only.
+
+extract_dttm <- format(params$extract_dttm, scientific = FALSE)
+dir_derived  <- here("data/derived", extract_dttm)
+
+f_derived <- if (nzchar(params$derived_file)) {
+  params$derived_file
+} else {
+  # file names are dat-YYYYMMDD-HHMMSS.qs2 so the last in sort order is the latest
+  tail(sort(list.files(dir_derived, pattern = "^dat-.*\\.qs2$")), 1)
+}
+if (length(f_derived) == 0 || !file.exists(here(dir_derived, f_derived))) {
+  stop("No derived data file found in ", dir_derived)
+}
+
+l_out <- qs2::qs_read(here(dir_derived, f_derived))
+l_cfg <- l_out$l_cfg
+l_dat <- l_out$l_dat
+l_pt  <- l_out$l_pt
+l_dm  <- l_out$l_dm
+
+cat("Report built from: ", f_derived, "\n", file = stderr())
+
+# ---- Helpers ----------------------------------------------------------------
+
+fmt_n    <- function(x) format(x, big.mark = ",", trim = TRUE)
+fmt_pct  <- function(x, digits = 0) paste0(formatC(100 * x, format = "f", digits = digits), "%")
+fmt_date <- function(d) sub("^0", "", format(d, "%d %B %Y"))
+
+is_dummy <- grepl("dummy", l_cfg$extract$data_dir, fixed = TRUE)
+
+# data cut (extract) date, taken from the extract label YYYYMMDDHHMM
+dt_cut <- as.Date(substr(extract_dttm, 1, 8), format = "%Y%m%d")
+
+# plot defaults
+cols_arm <- c("#0072B2", "#E69F00")   # arm 1, arm 2 within a domain (print safe)
+theme_set(
+  theme_bw(base_size = 9) +
+    theme(
+      panel.grid.minor = element_blank(),
+      strip.background = element_rect(fill = "grey92", colour = "grey60"),
+      legend.position  = "bottom"
+    )
+)
+
+# ---- Domains ----------------------------------------------------------------
+
+# domain and treatment possibilities
+dm_codes <- names(l_cfg$dm_defn)
+
+d_arm <- rbindlist(lapply(l_cfg$dm_defn, function(d) {
+  data.table(
+    dm      = d$dm,
+    dm_lab  = d$label,
+    arm_pos = seq_along(d$trt_map),
+    arm     = unname(unlist(d$trt_map))
+  )
+}))
+d_arm[, dm_lab := factor(dm_lab, levels = unique(dm_lab))]
+
+# ---- Randomised participants (platform) -------------------------------------
+
+# l_dat$id_pt_plt holds the participants whose platform eligibility outcome is
+# Randomised after test sites, removals and invalid enrolments are dealt with.
+# The participant list can contain other rows (e.g. non-randomised or test
+# participants), so it is restricted to this set.
+
+# attr(l_dat$id_pt_plt, "label")
+cat("Randomised ids: obtained from screening data to form id_pt_plt ", 
+    attr(l_dat$id_pt_plt, "label"), file = stderr())
+
+ids_rand <- l_dat$id_pt_plt
+
+# Not sure why but the data currently shows pts that have been rand but do not
+# appear in the d_pt_list
+d_pt <- l_pt$d_pt_list[StudyPtID %in% ids_rand]
+
+if(nrow(d_pt) < length(ids_rand)){
+  msg <- paste(
+    "Rows in d_pt_list (", nrow(d_pt), ")", 
+    "contain subset of those in randomised pts identified from ",
+    "screen data (", length(ids_rand), ")"
+  )
+  cat(msg, file = stderr())
+}
+
+d_pt[, dt_rand := as.Date(PT_RandomisationFirstLocal, format = "%d/%m/%Y")]
+d_pt[, site := sub("-.*$", "", StudyPtID)]
+# completed weeks since platform randomisation, at the data extract date
+d_pt[, wk := as.integer(dt_cut - dt_rand) %/% 7L]
+stopifnot(all(d_pt$wk >= 0L))
+
+n_pt_list_all  <- nrow(l_pt$d_pt_list)
+n_rand_no_list <- length(setdiff(ids_rand, d_pt$StudyPtID))
+stopifnot(!anyNA(d_pt$dt_rand))
+
+n_rand   <- nrow(d_pt)
+n_sites  <- uniqueN(d_pt$site)
+dt_first <- min(d_pt$dt_rand)
+dt_last  <- max(d_pt$dt_rand)
+
+cat("Participant list rows: ", n_pt_list_all,
+        "; randomised and in list: ", n_rand,
+        "; randomised but not in list: ", n_rand_no_list, "\n", file = stderr())
+
+# ---- Randomised participants by domain (domain eligibility data) ------------
+
+d_dm <- rbindlist(lapply(dm_codes, function(dm) {
+  x <- l_dm[[dm]][EL_Outcome %in% "Randomised" & StudyPtID %in% d_pt$StudyPtID,
+                  .(StudyPtID, arm = trt)]
+  x[, dm := dm]
+}))
+# While re-randomisation is technically possible, stop on any duplicates for now.
+stopifnot(!anyDuplicated(d_dm[, .(StudyPtID, dm)]))
+
+# an arm should always be recorded for a randomised participant; make a gap
+# visible rather than silently dropping rows
+if (anyNA(d_dm$arm)) {
+  cat("WARNING: ", sum(is.na(d_dm$arm)), " domain randomisations with no arm\n", file = stderr())
+}
+
+# pick up rand date
+d_dm <- merge(d_dm, d_pt[, .(StudyPtID, dt_rand)], by = "StudyPtID")
+# pcik up domain labels
+d_dm <- merge(d_dm, unique(d_arm[, .(dm, dm_lab)]), by = "dm")
+# site details and week
+d_dm <- merge(d_dm, d_pt[, .(StudyPtID, site, wk)], by = "StudyPtID")
+
+# counts by domain and arm, including arms with no participants
+d_dm_n <- merge(
+  d_arm,
+  d_dm[, .N, keyby = .(dm, arm)],
+  by = c("dm", "arm"), all.x = TRUE
+)
+d_dm_n[is.na(N), N := 0L]
+d_dm_n[, N_dm := sum(N), by = dm]
+d_dm_n[, prop := fifelse(N_dm > 0, N / N_dm, NA_real_)]
+setorder(d_dm_n, dm_lab, arm_pos)
+
+# platform randomisations are consistent with domain randomisations in the
+# participant list? (console message only)
+for (dm_i in dm_codes) {
+  col    <- paste0("PT_Assigned_Domain", dm_i)
+  n_list <- d_pt[!is.na(get(col)) & nzchar(get(col)), .N]
+  n_dm   <- d_dm[dm == dm_i, .N]
+  if (n_list != n_dm) {
+    cat("CHECK: ", dm_i, " has ", n_list, " assigned in participant list vs ",
+        n_dm, " randomised in domain data\n", file = stderr())
+  }
+}
+```
+
+```{r}
+#| label: header-macro
+#| output: asis
+
+# running header: data extract and dummy data flag
+cat(sprintf(
+  "\\renewcommand{\\datacut}{Data extract: %s%s}\n",
+  fmt_date(dt_cut),
+  if (is_dummy) " \\textbf{\\textcolor{red}{(DUMMY DATA)}}" else ""
+))
+```
+
+# Introduction
+
+```{r}
+#| output: asis
+if (is_dummy) {
+  cat("\\begin{center}\\fbox{\\parbox{0.9\\textwidth}{\\centering\\textbf{DUMMY DATA.} ",
+      "This report has been produced from simulated data to develop the report ",
+      "structure. No figure or count in this version relates to real participants.}}",
+      "\\end{center}\n")
+}
+```
+
+This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This first report describes enrolment to the platform and to each domain, the current length of follow-up, baseline characteristics and the primary outcome. It contains descriptive summaries only; no formal comparisons between arms are presented.
+
+**Population.** Only randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded, or whose assessment is pending are not shown. For the antibiotic duration domains, participants for whom the alternative revision type applied are not part of the domain.
+
+**Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course, so participants may be randomised within several domains, and domain sample sizes are not additive across domains. Both the platform level and the domain level views are therefore presented. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point.
+
+```{r}
+#| label: tbl-domains
+#| tbl-cap: "ROADMAP treatment domains and randomised arms."
+#| tbl-pos: 'H'
+
+d_dom_tab <- d_arm[, .(Arms = paste(arm, collapse = " vs ")), by = .(dm, dm_lab)]
+setnames(d_dom_tab, c("dm", "dm_lab"), c("Code", "Domain"))
+
+kbl(d_dom_tab, format = "latex", booktabs = TRUE, align = "lll") |>
+  kable_styling(font_size = 9)
+```
+
+**Data.** Data are from the extract dated `r fmt_date(dt_cut)` (extract label `r extract_dttm`). The extract has not been source verified. Counts are numbers of participants.
+
+# Platform enrolment
+
+As at the data extract, `r fmt_n(n_rand)` participants had been randomised to the platform from `r n_sites` recruiting sites. The first participant was randomised on `r fmt_date(dt_first)` and the most recent on `r fmt_date(dt_last)`. Randomisation over time is shown in @fig-enrol.
+
+```{r}
+#| label: fig-enrol
+#| fig-cap: "Platform randomisation over time. Top: cumulative number of participants randomised. Bottom: number randomised per calendar month."
+#| fig-width: 6.5
+#| fig-height: 4.4
+
+# daily counts -> cumulative step line, extended to the data cut
+d_cum <- d_pt[, .N, keyby = dt_rand][, cum := cumsum(N)]
+d_cum <- rbind(d_cum, data.table(dt_rand = dt_cut, N = 0L, cum = n_rand))
+
+# monthly counts including months with no randomisations
+month_start <- function(d) as.Date(format(d, "%Y-%m-01"))
+d_mon <- data.table(month = seq(month_start(dt_first), month_start(dt_cut), by = "month"))
+d_mon <- merge(d_mon, d_pt[, .N, by = .(month = month_start(dt_rand))],
+               by = "month", all.x = TRUE)
+d_mon[is.na(N), N := 0L]
+
+x_scale <- scale_x_date(
+  limits      = c(month_start(dt_first), dt_cut),
+  date_breaks = "3 months",
+  date_labels = "%b\n%Y",
+  expand      = expansion(mult = c(0.01, 0.02))
+)
+
+p_cum <- ggplot(d_cum, aes(dt_rand, cum)) +
+  geom_step(linewidth = 0.7, colour = "#0072B2") +
+  x_scale +
+  scale_y_continuous(labels = fmt_n, expand = expansion(mult = c(0.01, 0.05))) +
+  labs(x = NULL, y = "Cumulative randomised")
+
+p_mon <- ggplot(d_mon, aes(month, N)) +
+  geom_col(width = 25, fill = "#0072B2") +
+  x_scale +
+  scale_y_continuous(labels = fmt_n, expand = expansion(mult = c(0, 0.05))) +
+  labs(x = "Month of randomisation", y = "Randomised per month")
+
+p_cum / p_mon
+```
+
+## Participation in domains
+
+```{r}
+#| label: combos
+
+dm_asg_cols <- paste0("PT_Assigned_Domain", dm_codes)
+
+d_asg <- melt(
+  d_pt[, c("StudyPtID", dm_asg_cols), with = FALSE],
+  id.vars = "StudyPtID", variable.name = "dm", value.name = "code"
+)
+d_asg[, dm := factor(sub("PT_Assigned_Domain", "", dm), levels = dm_codes)]
+# only take rows with a treatment assignment code
+d_asg <- d_asg[!is.na(code) & nzchar(code)]
+setorder(d_asg, StudyPtID, dm)
+
+
+d_combo_pt <- d_asg[, .(combo = paste(dm, collapse = " + "), k = .N), by = StudyPtID]
+d_combo    <- d_combo_pt[, .N, by = .(combo, k)]
+setorder(d_combo, -N, k, combo)
+d_combo[, combo := factor(combo, levels = rev(combo))]
+
+n_in_dm   <- nrow(d_combo_pt)
+n_no_dm   <- n_rand - n_in_dm
+```
+
+Of the `r fmt_n(n_rand)` randomised participants, `r fmt_n(n_in_dm)` (`r fmt_pct(n_in_dm / n_rand, 1)`) have been randomised within at least one domain and `r fmt_n(n_no_dm)` have not yet been randomised within a domain. @fig-combos shows the combinations of domains in which participants have been randomised.
+
+```{r}
+#| label: fig-combos
+#| fig-cap: "Combinations of domains in which randomised participants have been randomised (participants randomised within at least one domain). SD = Surgical, AC = AB Choice, DA = AB Dur A, DB = AB Dur B."
+#| fig-width: 6.5
+#| fig-height: 3.2
+
+ggplot(d_combo, aes(N, combo)) +
+  geom_col(fill = "#0072B2", width = 0.7) +
+  geom_text(aes(label = fmt_n(N)), hjust = -0.2, size = 2.8) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
+  labs(x = "Participants", y = "Domains randomised within")
+```
+
+## Randomisation by study site
+
+Randomisations by study site are shown in @tbl-sites. Participants can be randomised within more than one domain, so the domain columns do not sum to the platform total.
+
+```{r}
+#| label: tbl-sites
+#| tbl-cap: "Participants randomised by study site: platform and within each domain."
+#| tbl-pos: 'H'
+
+dm_lab_chr <- as.character(unique(d_arm[, .(dm, dm_lab)])$dm_lab)
+
+d_site <- d_pt[, .(Platform = .N), by = site]
+d_site_dm <- dcast(d_dm[, .N, by = .(site, dm)], site ~ dm, value.var = "N", fill = 0L)
+for (cc in setdiff(dm_codes, names(d_site_dm))) d_site_dm[, (cc) := 0L]
+d_site <- merge(d_site, d_site_dm, by = "site", all.x = TRUE)
+for (cc in dm_codes) set(d_site, which(is.na(d_site[[cc]])), cc, 0L)
+setorder(d_site, -Platform, site)
+
+d_site_tot <- d_site[, lapply(.SD, sum), .SDcols = c("Platform", dm_codes)]
+d_site_tot[, site := "Total"]
+d_site <- rbind(d_site, d_site_tot, use.names = TRUE)
+
+d_site_tab <- d_site[, c(
+  list(Site = site,
+       Platform = paste0(fmt_n(Platform), " (", fmt_pct(Platform / n_rand, 1), ")")),
+  lapply(.SD, fmt_n)
+), .SDcols = dm_codes]
+
+kbl(
+  d_site_tab, format = "latex", booktabs = TRUE, align = "lrrrrr",
+  col.names = c("Site", "Platform, n (%)", dm_lab_chr)
+) |>
+  add_header_above(c(" " = 2, "Randomised within domain, n" = length(dm_codes))) |>
+  kable_styling(font_size = 9) |>
+  row_spec(nrow(d_site_tab) - 1, extra_latex_after = "\\midrule") |>
+  row_spec(nrow(d_site_tab), bold = TRUE)
+```
+
+# Domain summaries
+
+```{r}
+#| label: dm-helpers
+
+# one-line summary of randomised numbers by arm, for inline use
+dm_txt <- function(code) {
+  x <- d_dm_n[dm == code]
+  arms <- paste0(fmt_n(x$N), " to ", x$arm, collapse = ", ")
+  paste0(fmt_n(x$N_dm[1]), " participants have been randomised in the ",
+         x$dm_lab[1], " domain: ", arms, ".")
+}
+
+# two panel figure for a domain:
+# A) randomised by arm; B) cumulative randomised by arm
+fig_dm <- function(code) {
+  x   <- d_dm_n[dm == code]
+  col <- setNames(cols_arm[x$arm_pos], x$arm)
+
+  p_a <- ggplot(x, aes(factor(arm, levels = arm), N, fill = arm)) +
+    geom_col(width = 0.6) +
+    geom_text(
+      aes(label = paste0(N, " (", fmt_pct(prop), ")")),
+      vjust = -0.4, size = 2.8
+    ) +
+    scale_fill_manual(values = col, guide = "none") +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+    labs(x = NULL, y = "Participants randomised", title = "A. By arm")
+
+  # cumulative by arm over platform randomisation date, carried to the data cut
+  y <- d_dm[dm == code, .N, keyby = .(arm, dt_rand)]
+  y[, cum := cumsum(N), by = arm]
+  y <- rbind(
+    y,
+    data.table(arm = x$arm, dt_rand = dt_cut, N = 0L, cum = x$N)[arm %in% x$arm],
+    fill = TRUE
+  )
+  y[, arm := factor(arm, levels = x$arm)]
+
+  p_b <- ggplot(y, aes(dt_rand, cum, colour = arm)) +
+    geom_step(linewidth = 0.7) +
+    scale_colour_manual(values = col, name = NULL) +
+    scale_x_date(date_breaks = "3 months", date_labels = "%b\n%Y") +
+    labs(
+      x = "Date of platform randomisation",
+      y = "Cumulative randomised",
+      title = "B. Cumulative over time"
+    )
+
+  p_a + p_b + plot_layout(widths = c(1, 1.6))
+}
+
+fig_note <- paste(
+  ""
+)
+```
+
+The domain level view is based on the domain eligibility data. @tbl-dm-n gives the number randomised to each arm and @fig-dm-overview compares the domains. The following sections show each domain in turn.
+
+```{r}
+#| label: tbl-dm-n
+#| tbl-cap: "Participants randomised within each domain, by arm."
+#| tbl-pos: 'H'
+
+d_tab <- d_dm_n[, .(
+  Domain = as.character(dm_lab),
+  Arm    = arm,
+  n      = N,
+  `% of domain` = fmt_pct(prop, 1)
+)]
+
+kbl(d_tab, format = "latex", booktabs = TRUE, align = "llrr") |>
+  kable_styling(font_size = 9) |>
+  collapse_rows(columns = 1, latex_hline = "major", valign = "top")
+```
+
+```{r}
+#| label: fig-dm-overview
+#| fig-cap: "Number of participants randomised to each arm within each domain (percentage of the domain in brackets)."
+#| fig-width: 6.5
+#| fig-height: 3.4
+
+d_ov <- copy(d_dm_n)
+d_ov[, arm_f := factor(paste(dm, arm, sep = "|"), levels = paste(dm, arm, sep = "|"))]
+
+ggplot(d_ov, aes(arm_f, N, fill = factor(arm_pos))) +
+  geom_col(width = 0.65) +
+  geom_text(aes(label = paste0(N, "\n(", fmt_pct(prop), ")")),
+            vjust = -0.2, size = 2.6, lineheight = 0.9) +
+  facet_wrap(vars(dm_lab), scales = "free_x", nrow = 1) +
+  scale_x_discrete(labels = function(z) sub("^.*\\|", "", z)) +
+  scale_fill_manual(values = cols_arm, guide = "none") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.22))) +
+  labs(x = NULL, y = "Participants randomised") +
+  theme(axis.text.x = element_text(size = 7))
+```
+
+## Surgical domain
+
+`r dm_txt("SD")`
+
+```{r}
+#| label: fig-dm-sd
+#| fig-cap: !expr 'paste("Surgical domain: participants randomised. ", fig_note)'
+#| fig-width: 6.5
+#| fig-height: 2.9
+
+fig_dm("SD")
+```
+
+## AB Choice domain
+
+`r dm_txt("AC")`
+
+```{r}
+#| label: fig-dm-ac
+#| fig-cap: !expr 'paste("AB Choice domain: participants randomised. ", fig_note)'
+#| fig-width: 6.5
+#| fig-height: 2.9
+
+fig_dm("AC")
+```
+
+## AB Dur A domain
+
+`r dm_txt("DA")`
+
+```{r}
+#| label: fig-dm-da
+#| fig-cap: !expr 'paste("AB Dur A domain: participants randomised. ", fig_note)'
+#| fig-width: 6.5
+#| fig-height: 2.9
+
+fig_dm("DA")
+```
+
+## AB Dur B domain
+
+`r dm_txt("DB")`
+
+```{r}
+#| label: fig-dm-db
+#| fig-cap: !expr 'paste("AB Dur B domain: participants randomised. ", fig_note)'
+#| fig-width: 6.5
+#| fig-height: 2.9
+
+fig_dm("DB")
+```
+
+# Current week of study
+
+@fig-weeks shows the current week of study for randomised participants at the extract date, for the platform and within each domain. Study week is the number of completed weeks since platform randomisation. The dshed line marks week 52 (day 365), the time of the primary outcome.
+
+```{r}
+#| label: fig-weeks
+#| fig-cap: "Current week of study at the data extract date (completed weeks since platform randomisation) for randomised participants, for the platform and by domain. Dashed line: week 52 (day 365)."
+#| fig-width: 6.5
+#| fig-height: 5.5
+
+d_wk <- rbind(
+  d_pt[, .(panel = "Platform", wk)],
+  d_dm[, .(panel = as.character(dm_lab), wk)]
+)
+d_wk[, panel := factor(panel, levels = c("Platform", dm_lab_chr))]
+d_wk_n <- d_wk[, .N, by = .(panel, wk)]
+
+ggplot(d_wk_n, aes(wk, N)) +
+  geom_col(width = 0.85, fill = "#0072B2") +
+  geom_vline(xintercept = 365 / 7, linetype = "dashed", colour = "grey30", linewidth = 0.4) +
+  facet_wrap(vars(panel), ncol = 2, scales = "free_y") +
+  scale_x_continuous(breaks = seq(0, ceiling(max(d_wk$wk) / 13) * 13, by = 13)) +
+  scale_y_continuous(
+    breaks = function(l) { b <- pretty(l); b[b == floor(b)] },
+    labels = fmt_n, expand = expansion(mult = c(0, 0.08))
+  ) +
+  labs(x = "Weeks since platform randomisation", y = "Participants")
+```
+
+# Baseline characteristics
+
+```{r}
+#| label: bl-prep
+
+# Baseline data are held once per participant in the raw baseline extract, so
+# the platform and domain views are built from the same cleaned table. The raw
+# baseline file contains participants who are not randomised, so it is
+# restricted to the randomised set. Participants with no baseline record stay
+# in the denominators and count as missing.
+
+bl_chr <- function(x) {
+  x <- trimws(as.character(x))
+  x[is.na(x) | tolower(x) %in% c("", "n/a", "na", "null")] <- NA_character_
+  x
+}
+bl_num <- function(x) suppressWarnings(as.numeric(bl_chr(x)))
+bl_cat <- function(x, lev) {
+  x <- bl_chr(x)
+  bad <- !is.na(x) & !(x %in% lev)
+  if (any(bad)) {
+    cat("CHECK: baseline values not in expected levels, set to missing: ",
+        paste(unique(x[bad]), collapse = ", "), "\n", file = stderr())
+  }
+  x[bad] <- NA_character_
+  factor(x, levels = lev)
+}
+
+
+# All the variables included in baseline data
+bl_spec <- list(
+  list(src = "BAS_Dem_Age", lab = "Age, years", type = "num"),
+  list(src = "BAS_Dem_Sex", lab = "Sex", type = "cat", lev = c("Female", "Male")),
+  list(src = "BAS_DIP_IJSite", lab = "Index joint", type = "cat", lev = c("Hip", "Knee")),
+  list(
+    src = "BAS_DIP_IJSide", lab = "Index joint side", 
+    type = "cat", lev = c("Left", "Right")),
+  list(src = "BAS_DIP_ProthesisType", lab = "Prosthesis type", type = "cat",
+       lev = c("Primary", "Revision")),
+  list(hdr = "Comorbidities, n (\\%)"),
+  list(src = "BAS_Comorb_DiabetesMellitus", lab = "Diabetes mellitus", type = "bin"),
+  list(src = "BAS_Comorb_ChronicRenalDisease",
+       lab = "Chronic renal disease (eGFR $<$ 50, not on dialysis)", type = "bin"),
+  list(src = "BAS_Comorb_EndStageRenalFailure",
+       lab = "End stage renal failure (haemodialysis or CAPD)", type = "bin"),
+  list(
+    src = "BAS_Comorb_MalignancyPast12M", 
+    lab = "Malignancy in past 12 months", type = "bin"),
+  list(src = "BAS_Comorb_Cirrhosis", lab = "Cirrhosis", type = "bin"),
+  list(src = "BAS_Comorb_RheumatoidArthritis", lab = "Rheumatoid arthritis", type = "bin"),
+  list(src = "BAS_Comorb_CorticosteroidPast6M",
+       lab = "Systemic corticosteroid use in past 6 months", type = "bin"),
+  list(
+    src = "BAS_Comorb_IatrogenicImmunoSupp", 
+    lab = "Iatrogenic immunosuppression", type = "bin"),
+  list(src = "BAS_Comorb_Cardiac", lab = "Congestive cardiac failure", type = "bin"),
+  list(src = "BAS_Comorb_Obesity", lab = "Obesity (BMI $\\geq$ 30)", type = "bin"),
+  list(
+    src = "BAS_CQI_ASAClassification", lab = "ASA classification", type = "cat",
+    lev = c("ASA I", "ASA II", "ASA III", "ASA IV", "ASA V", "ASA VI", "Not documented")),
+  list(src = "BAS_Microbio_CausativeOrganismIdentified",
+       lab = "Causative organism identified", type = "bin"),
+  list(hdr = "Blood tests"),
+  list(src = "BAS_Bloods_CRP_mgL", lab = "C-reactive protein, mg/L", type = "num"),
+  list(src = "BAS_Bloods_Antibio_SerumCreatinine_umolL",
+       lab = "Serum creatinine, $\\mu$mol/L", type = "num"),
+  list(src = "BAS_Bloods_Antibio_ALT_Entered", lab = "ALT", type = "num"),
+  list(src = "BAS_Bloods_Antibio_AST_Entered", lab = "AST", type = "num"),
+  list(src = "BAS_Bloods_Antibio_Bilirubin_umolL", lab = "Bilirubin, $\\mu$mol/L", type = "num"),
+  list(hdr = "Patient reported outcomes"),
+  list(src = "BAS_OHS_Score", lab = "Oxford Hip Score (0--48)", type = "num"),
+  list(src = "BAS_OKS_Score", lab = "Oxford Knee Score (0--48)", type = "num"),
+  list(src = "BAS_EQ5D5L_Score", lab = "EQ-5D-5L score", type = "num"),
+  list(src = "BAS_EQ5D5L_HealthToday", lab = "EQ-5D-5L health today (0--100)", type = "num")
+)
+bl_src <- unlist(lapply(bl_spec, `[[`, "src"))
+
+d_bl_raw <- l_out$l_raw$baseline[StudyPtID %in% d_pt$StudyPtID]
+stopifnot(!anyDuplicated(d_bl_raw$StudyPtID))
+
+d_c <- merge(
+  d_pt[, .(StudyPtID)],
+  d_bl_raw[, c("StudyPtID", bl_src), with = FALSE],
+  by = "StudyPtID", all.x = TRUE
+)
+d_c[, has_bl := StudyPtID %in% d_bl_raw$StudyPtID]
+# just formatting each of the fields
+for (s in bl_spec) {
+  if (is.null(s$src)) next
+  v <- d_c[[s$src]]
+  set(d_c, j = s$src, value = switch(
+    s$type,
+    num = bl_num(v),
+    cat = bl_cat(v, s$lev),
+    bin = bl_cat(v, c("No", "Yes"))
+  ))
+}
+
+# a missing row is only shown for variables with missing values
+for (i in seq_along(bl_spec)) {
+  s <- bl_spec[[i]]
+  bl_spec[[i]]$show_miss <- !is.null(s$src) && anyNA(d_c[[s$src]])
+}
+
+n_pct <- function(n, N) {
+  if (N == 0) return("--")
+  paste0(fmt_n(n), " (", formatC(100 * n / N, format = "f", digits = 1), "\\%)")
+}
+fmt_q <- function(x) format(round(x, 1), trim = TRUE, nsmall = 0)
+ind <- "\\hspace{1em}"
+
+bl_rows_spec <- function(s, x) {
+  
+  if (!is.null(s$hdr)) {
+    return(data.table(label = paste0("\\textbf{", s$hdr, "}"), val = ""))
+  }
+  v    <- x[[s$src]]
+  n_ok <- sum(!is.na(v))
+  
+  r <- switch(
+    s$type,
+    # numbers
+    num = data.table(
+      label = paste0(s$lab, ", median (Q1, Q3)"),
+      val   = if (n_ok == 0) "--" else {
+        q <- quantile(v, c(0.25, 0.5, 0.75), na.rm = TRUE, names = FALSE)
+        paste0(fmt_q(q[2]), " (", fmt_q(q[1]), ", ", fmt_q(q[3]), ")")
+      }
+    ),
+    # factors
+    cat = rbind(
+      data.table(label = paste0(s$lab, ", n (\\%)"), val = ""),
+      data.table(
+        label = paste0(ind, s$lev),
+        val   = vapply(s$lev, function(l) n_pct(sum(v == l, na.rm = TRUE), n_ok), "")
+      )
+    ),
+    # binary variables
+    bin = data.table(label = paste0(ind, s$lab), val = n_pct(sum(v == "Yes", na.rm = TRUE), n_ok))
+  )
+  if (isTRUE(s$show_miss)) {
+    r <- rbind(r, data.table(label = paste0(ind, "Missing, n"), val = fmt_n(sum(is.na(v)))))
+  }
+  r
+}
+
+bl_rows <- function(ids) {
+  x <- d_c[StudyPtID %in% ids]
+  rbind(
+    data.table(label = "Randomised, n", val = fmt_n(nrow(x))),
+    data.table(label = "Baseline form received, n (\\%)", val = n_pct(sum(x$has_bl), nrow(x))),
+    rbindlist(lapply(bl_spec, bl_rows_spec, x = x))
+  )
+}
+
+# population/sample groups: platform, then each arm within each domain
+grp_ids <- list(Platform = d_pt$StudyPtID)
+grp_nm  <- "All randomised"
+for (code in dm_codes) {
+  for (a in d_arm[dm == code, arm]) {
+    grp_ids[[paste(code, a, sep = "|")]] <- d_dm[dm == code & arm == a, StudyPtID]
+    grp_nm <- c(grp_nm, a)
+  }
+}
+# summary by each set of population ids
+d_bl_cols <- lapply(grp_ids, bl_rows)
+d_bl_tab  <- data.table(Characteristic = d_bl_cols[[1]]$label)
+for (i in seq_along(d_bl_cols)) {
+  set(d_bl_tab, j = paste0("g", i), value = d_bl_cols[[i]]$val)
+}
+```
+
+Baseline characteristics are shown in @tbl-baseline for all randomised participants and for each arm within each domain. Participants appear in more than one domain column where they have been randomised within several domains. Continuous variables are summarised as the median (first and third quartiles) and categorical variables as the number (percentage) of participants with a recorded value. Missing values are counted separately. Participants with no baseline record are counted as missing for every variable.
+
+```{=latex}
+\begin{landscape}
+\setlength{\tabcolsep}{3pt}
+```
+
+```{r}
+#| label: tbl-baseline
+#| tbl-cap: "Baseline characteristics of randomised participants: platform and by domain and arm."
+#| tbl-pos: 'H'
+
+hdr_dm <- setNames(rep(2, length(dm_codes)), dm_lab_chr)
+
+kbl(
+  d_bl_tab, format = "latex", booktabs = TRUE, longtable = TRUE, escape = FALSE,
+  align = c("l", rep("r", length(grp_ids))),
+  col.names = c("Characteristic", grp_nm),
+  linesep = ""
+) |>
+  add_header_above(c(" " = 2, hdr_dm)) |>
+  kable_styling(font_size = 7, latex_options = "repeat_header") |>
+  column_spec(1, width = "5.9cm")
+```
+
+```{=latex}
+\end{landscape}
+```
+
+# Primary outcome
+
+The primary outcome is treatment success at day 365 (window of 30 days either side) after platform randomisation. A participant is a success if they are alive, with no clinical and no microbiological evidence of infection of the index joint, and the prosthesis is in place. A participant is a failure if they have died, have clinical or microbiological evidence of infection, or the prosthesis is not in place. Where the outcome is not known to be a failure and any component is missing or unknown, the outcome is classed as missing once the participant has reached day 335, the start of the outcome window, and as not yet due before that. @tbl-po and @fig-po summarise the outcome for the platform and by arm within each domain. No formal comparisons are made.
+
+```{r}
+#| label: po-prep
+
+win_open <- 365 - 30   # start of the day 365 window
+
+low  <- function(x) tolower(trimws(as.character(x)))
+d365 <- copy(l_out$l_raw$d365)
+d365[, StudyPtID := trimws(StudyPtID)]
+stopifnot(!anyDuplicated(d365$StudyPtID))
+
+d_o <- d365[StudyPtID %in% d_pt$StudyPtID, .(
+  StudyPtID,
+  alive  = low(D365_VitalStatus),
+  clin   = low(D365_VitalStatus_IJInfection_ClinicalEvidence),
+  micro  = low(D365_VitalStatus_IJInfection_MicrobioEvidence),
+  prosth = low(D365_VitalStatus_ProsthesisInPlace)
+)]
+d_o[, success := alive %in% "alive" & clin %in% "no" & micro %in% "no" & prosth %in% "yes"]
+d_o[, failure := alive %in% "dead" | clin %in% "yes" | micro %in% "yes" | prosth %in% "no"]
+
+d_po <- merge(
+  d_pt[, .(StudyPtID, dt_rand)],
+  d_o[, .(StudyPtID, success, failure)],
+  by = "StudyPtID", all.x = TRUE
+)
+d_po[, days := as.integer(dt_cut - dt_rand)]
+d_po[, status := fcase(
+  success %in% TRUE, "Success",
+  failure %in% TRUE, "Failure",
+  days >= win_open,  "Outcome missing",
+  default = "Not yet due"
+)]
+d_po[, status := factor(status, levels = c("Success", "Failure", "Outcome missing", "Not yet due"))]
+
+po_row <- function(ids) {
+  s  <- d_po[StudyPtID %in% ids, status]
+  ns <- sum(s == "Success"); nf <- sum(s == "Failure")
+  data.table(
+    n = length(s), succ = ns, fail = nf,
+    miss = sum(s == "Outcome missing"), nyd = sum(s == "Not yet due"),
+    pct = if (ns + nf > 0) fmt_pct(ns / (ns + nf), 1) else "--"
+  )
+}
+
+d_po_tab <- rbindlist(c(
+  list(cbind(data.table(Domain = "Platform", Arm = "All randomised"), po_row(d_pt$StudyPtID))),
+  lapply(seq_len(nrow(d_arm)), function(i) {
+    cbind(
+      data.table(Domain = as.character(d_arm$dm_lab[i]), Arm = d_arm$arm[i]),
+      po_row(d_dm[dm == d_arm$dm[i] & arm == d_arm$arm[i], StudyPtID])
+    )
+  })
+))
+```
+
+```{r}
+#| label: tbl-po
+#| tbl-cap: "Primary outcome (treatment success at day 365) for randomised participants: platform and by domain and arm."
+#| tbl-pos: 'H'
+
+d_po_show <- copy(d_po_tab)
+num_cols  <- c("n", "succ", "fail", "miss", "nyd")
+d_po_show[, (num_cols) := lapply(.SD, fmt_n), .SDcols = num_cols]
+
+kbl(
+  d_po_show, format = "latex", booktabs = TRUE,
+  align = "llrrrrrr",
+  col.names = c("Domain", "Arm", "Randomised", "Success", "Failure",
+                "Outcome missing", "Not yet due", "Success among known, %")
+) |>
+  kable_styling(font_size = 8) |>
+  collapse_rows(columns = 1, latex_hline = "major", valign = "top") |>
+  footnote(
+    general = paste(
+      "Randomised = Success + Failure + Outcome missing + Not yet due.",
+      "Known outcomes are Success plus Failure; the percentage is of known outcomes.",
+      "Outcome missing: day 335 reached and outcome not known.",
+      "Not yet due: day 335 not reached and outcome not known."
+    ),
+    general_title = "Note: ", threeparttable = TRUE, escape = TRUE
+  )
+```
+
+```{r}
+#| label: fig-po
+#| fig-cap: "Primary outcome status of randomised participants by arm within each domain (proportion of participants randomised to the arm)."
+#| fig-width: 6.5
+#| fig-height: 4.2
+
+d_fig <- rbindlist(lapply(seq_len(nrow(d_arm)), function(i) {
+  ids <- d_dm[dm == d_arm$dm[i] & arm == d_arm$arm[i], StudyPtID]
+  x <- d_po[StudyPtID %in% ids, .N, by = status]
+  x <- merge(data.table(status = levels(d_po$status)), x, by = "status", all.x = TRUE)
+  x[is.na(N), N := 0L]
+  x[, `:=`(dm_lab = d_arm$dm_lab[i], arm_lab = paste0(d_arm$arm[i], "\n(n = ", length(ids), ")"))]
+  x
+}))
+d_fig[, status := factor(status, levels = levels(d_po$status))]
+d_fig[, arm_lab := factor(arm_lab, levels = rev(unique(arm_lab)))]
+
+ggplot(d_fig, aes(N, arm_lab, fill = status)) +
+  geom_col(position = position_fill(reverse = TRUE), width = 0.7) +
+  facet_wrap(vars(dm_lab), ncol = 2, scales = "free_y") +
+  scale_x_continuous(labels = function(z) paste0(100 * z, "%"), expand = expansion(mult = c(0, 0.02))) +
+  scale_fill_manual(
+    values = c(Success = "#009E73", Failure = "#D55E00",
+               `Outcome missing` = "#999999", `Not yet due` = "#E3E3E3"),
+    name = NULL, drop = FALSE
+  ) +
+  labs(x = "Proportion of participants", y = NULL)
+```
+
+<!--
+Planned sections (not yet populated):
+  - CONSORT diagram
+  - Study withdrawal
+  - Protocol deviations (no data yet)
+  - Safety reporting (limited per protocol; scope to be agreed)
+-->
