@@ -73,11 +73,14 @@ if (length(f_derived) == 0 || !file.exists(here(dir_derived, f_derived))) {
   stop("No derived data file found in ", dir_derived)
 }
 
+# The report only uses the processed data, never the raw extracts. Each element
+# is described at the end of main() in the extract script.
 l_out <- qs2::qs_read(here(dir_derived, f_derived))
-l_cfg <- l_out$l_cfg
-l_dat <- l_out$l_dat
-l_pt  <- l_out$l_pt
-l_dm  <- l_out$l_dm
+l_cfg <- l_out$l_cfg   # configuration, including the baseline data dictionary
+l_pt  <- l_out$l_pt    # participants: reporting population and domain allocation
+l_bl  <- l_out$l_bl    # baseline and microbiology
+l_po  <- l_out$l_po    # primary outcome
+l_pd  <- l_out$l_pd    # protocol deviations
 
 cat("Report built from: ", f_derived, "\n", file = stderr())
 
@@ -87,10 +90,27 @@ fmt_n    <- function(x) format(x, big.mark = ",", trim = TRUE)
 fmt_pct  <- function(x, digits = 0) paste0(formatC(100 * x, format = "f", digits = digits), "%")
 fmt_date <- function(d) sub("^0", "", format(d, "%d %B %Y"))
 
+# escape the characters that LaTeX treats as special
+tex_esc <- function(x) gsub("([&%$#_{}])", "\\\\\\1", x)
+
+# plain text (as held in the baseline data dictionary) to a LaTeX label
+tex_label <- function(x) {
+  x <- tex_esc(x)
+  x <- gsub("<", "$<$", x, fixed = TRUE)
+  x <- gsub(">=", "$\\geq$", x, fixed = TRUE)
+  x <- gsub("umol", "$\\mu$mol", x, fixed = TRUE)
+  gsub("([0-9])-([0-9])", "\\1--\\2", x)   # ranges such as 0-48
+}
+
 is_dummy <- grepl("dummy", l_cfg$extract$data_dir, fixed = TRUE)
 
-# data cut (extract) date, taken from the extract label YYYYMMDDHHMM
-dt_cut <- as.Date(substr(extract_dttm, 1, 8), format = "%Y%m%d")
+# data cut (extract) date
+dt_cut <- l_cfg$version$dt_extract
+
+# primary outcome timing, set in the extract script (l_cfg$d365)
+po_day  <- l_cfg$d365$day
+po_win  <- l_cfg$d365$window
+po_open <- po_day - po_win   # the outcome window opens
 
 # plot defaults
 cols_arm <- c("#0072B2", "#E69F00")   # arm 1, arm 2 within a domain (print safe)
@@ -120,71 +140,26 @@ d_arm[, dm_lab := factor(dm_lab, levels = unique(dm_lab))]
 
 # ---- Randomised participants (platform) -------------------------------------
 
-# l_dat$id_pt_plt holds the participants whose platform eligibility outcome is
-# Randomised after test sites, removals and invalid enrolments are dealt with.
-# The participant list can contain other rows (e.g. non-randomised or test
-# participants), so it is restricted to this set.
-
-# attr(l_dat$id_pt_plt, "label")
-cat("Randomised ids: obtained from screening data to form id_pt_plt ", 
-    attr(l_dat$id_pt_plt, "label"), file = stderr())
-
-ids_rand <- l_dat$id_pt_plt
-
-# Not sure why but the data currently shows pts that have been rand but do not
-# appear in the d_pt_list
-d_pt <- l_pt$d_pt_list[StudyPtID %in% ids_rand]
-
-if(nrow(d_pt) < length(ids_rand)){
-  msg <- paste(
-    "Rows in d_pt_list (", nrow(d_pt), ")", 
-    "contain subset of those in randomised pts identified from ",
-    "screen data (", length(ids_rand), ")"
-  )
-  cat(msg, file = stderr())
-}
-
-d_pt[, dt_rand := as.Date(PT_RandomisationFirstLocal, format = "%d/%m/%Y")]
-d_pt[, site := sub("-.*$", "", StudyPtID)]
+# l_pt$d_pt is the reporting population made in participants() in the extract
+# script: randomised participants that are in the participant list, with the
+# site, the date of platform randomisation and the days from randomisation to
+# the data extract. The baseline, primary outcome and deviation data are already
+# restricted to these participants, so every table has the same denominator.
+d_pt <- copy(l_pt$d_pt)
 # completed weeks since platform randomisation, at the data extract date
-d_pt[, wk := as.integer(dt_cut - dt_rand) %/% 7L]
-stopifnot(all(d_pt$wk >= 0L))
-
-n_pt_list_all  <- nrow(l_pt$d_pt_list)
-n_rand_no_list <- length(setdiff(ids_rand, d_pt$StudyPtID))
-stopifnot(!anyNA(d_pt$dt_rand))
+d_pt[, wk := days_rand %/% 7L]
 
 n_rand   <- nrow(d_pt)
 n_sites  <- uniqueN(d_pt$site)
 dt_first <- min(d_pt$dt_rand)
 dt_last  <- max(d_pt$dt_rand)
 
-cat("Participant list rows: ", n_pt_list_all,
-        "; randomised and in list: ", n_rand,
-        "; randomised but not in list: ", n_rand_no_list, "\n", file = stderr())
+# ---- Randomised participants by domain --------------------------------------
 
-# ---- Randomised participants by domain (domain eligibility data) ------------
-
-d_dm <- rbindlist(lapply(dm_codes, function(dm) {
-  x <- l_dm[[dm]][EL_Outcome %in% "Randomised" & StudyPtID %in% d_pt$StudyPtID,
-                  .(StudyPtID, arm = trt)]
-  x[, dm := dm]
-}))
-# While re-randomisation is technically possible, stop on any duplicates for now.
-stopifnot(!anyDuplicated(d_dm[, .(StudyPtID, dm)]))
-
-# an arm should always be recorded for a randomised participant; make a gap
-# visible rather than silently dropping rows
-if (anyNA(d_dm$arm)) {
-  cat("WARNING: ", sum(is.na(d_dm$arm)), " domain randomisations with no arm\n", file = stderr())
-}
-
-# pick up rand date
-d_dm <- merge(d_dm, d_pt[, .(StudyPtID, dt_rand)], by = "StudyPtID")
-# pcik up domain labels
-d_dm <- merge(d_dm, unique(d_arm[, .(dm, dm_lab)]), by = "dm")
-# site details and week
-d_dm <- merge(d_dm, d_pt[, .(StudyPtID, site, wk)], by = "StudyPtID")
+# l_pt$d_pt_dm has a row for each participant randomised within a domain, with
+# the arm. Add the domain label and the participant details used in the plots.
+d_dm <- merge(l_pt$d_pt_dm, unique(d_arm[, .(dm, dm_lab)]), by = "dm")
+d_dm <- merge(d_dm, d_pt[, .(StudyPtID, dt_rand, site, wk)], by = "StudyPtID")
 
 # counts by domain and arm, including arms with no participants
 d_dm_n <- merge(
@@ -196,18 +171,6 @@ d_dm_n[is.na(N), N := 0L]
 d_dm_n[, N_dm := sum(N), by = dm]
 d_dm_n[, prop := fifelse(N_dm > 0, N / N_dm, NA_real_)]
 setorder(d_dm_n, dm_lab, arm_pos)
-
-# platform randomisations are consistent with domain randomisations in the
-# participant list? (console message only)
-for (dm_i in dm_codes) {
-  col    <- paste0("PT_Assigned_Domain", dm_i)
-  n_list <- d_pt[!is.na(get(col)) & nzchar(get(col)), .N]
-  n_dm   <- d_dm[dm == dm_i, .N]
-  if (n_list != n_dm) {
-    cat("CHECK: ", dm_i, " has ", n_list, " assigned in participant list vs ",
-        n_dm, " randomised in domain data\n", file = stderr())
-  }
-}
 ```
 
 ```{r}
@@ -234,11 +197,11 @@ if (is_dummy) {
 }
 ```
 
-This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This first report describes enrolment to the platform and to each domain, the current length of follow-up, baseline characteristics and the primary outcome. It contains descriptive summaries only; no formal comparisons between arms are presented.
+This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This first report describes enrolment to the platform and to each domain, the current length of follow-up, baseline characteristics and the primary outcome. It contains descriptive summaries only; no formal comparisons between arms are made.
 
-**Population.** Only randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded, or whose assessment is pending are not shown. For the antibiotic duration domains, participants for whom the alternative revision type applied are not part of the domain.
+**Population.** Only randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded, or whose assessment is pending are not shown but are detailed in the consort diagram (provided separately).
 
-**Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course, so participants may be randomised within several domains, and domain sample sizes are not additive across domains. Both the platform level and the domain level views are therefore presented. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point.
+**Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course. Participants may be randomised within several domains. Both the platform level and the domain level views are presented. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point.
 
 ```{r}
 #| label: tbl-domains
@@ -252,7 +215,7 @@ kbl(d_dom_tab, format = "latex", booktabs = TRUE, align = "lll") |>
   kable_styling(font_size = 9)
 ```
 
-**Data.** Data are from the extract dated `r fmt_date(dt_cut)` (extract label `r extract_dttm`). The extract has not been source verified. Counts are numbers of participants.
+**Data.** Data are from the extract dated `r fmt_date(dt_cut)` (extract label `r extract_dttm`).
 
 # Platform enrolment
 
@@ -527,11 +490,11 @@ fig_dm("DB")
 
 # Current week of study
 
-@fig-weeks shows the current week of study for randomised participants at the extract date, for the platform and within each domain. Study week is the number of completed weeks since platform randomisation. The dshed line marks week 52 (day 365), the time of the primary outcome.
+@fig-weeks shows the current week of study for randomised participants at the extract date, for the platform and within each domain. Study week is the number of completed weeks since platform randomisation. The dashed line marks week `r round(po_day / 7)` (day `r po_day`), the time of the primary outcome.
 
 ```{r}
 #| label: fig-weeks
-#| fig-cap: "Current week of study at the data extract date (completed weeks since platform randomisation) for randomised participants, for the platform and by domain. Dashed line: week 52 (day 365)."
+#| fig-cap: !expr 'paste0("Current week of study at the data extract date (completed weeks since platform randomisation) for randomised participants, for the platform and by domain. Dashed line: week ", round(po_day / 7), " (day ", po_day, ").")'
 #| fig-width: 6.5
 #| fig-height: 5.5
 
@@ -544,7 +507,7 @@ d_wk_n <- d_wk[, .N, by = .(panel, wk)]
 
 ggplot(d_wk_n, aes(wk, N)) +
   geom_col(width = 0.85, fill = "#0072B2") +
-  geom_vline(xintercept = 365 / 7, linetype = "dashed", colour = "grey30", linewidth = 0.4) +
+  geom_vline(xintercept = po_day / 7, linetype = "dashed", colour = "grey30", linewidth = 0.4) +
   facet_wrap(vars(panel), ncol = 2, scales = "free_y") +
   scale_x_continuous(breaks = seq(0, ceiling(max(d_wk$wk) / 13) * 13, by = 13)) +
   scale_y_continuous(
@@ -559,104 +522,20 @@ ggplot(d_wk_n, aes(wk, N)) +
 ```{r}
 #| label: bl-prep
 
-# Baseline data are held once per participant in the raw baseline extract, so
-# the platform and domain views are built from the same cleaned table. The raw
-# baseline file contains participants who are not randomised, so it is
-# restricted to the randomised set. Participants with no baseline record stay
-# in the denominators and count as missing.
-
-bl_chr <- function(x) {
-  x <- trimws(as.character(x))
-  x[is.na(x) | tolower(x) %in% c("", "n/a", "na", "null")] <- NA_character_
-  x
-}
-bl_num <- function(x) suppressWarnings(as.numeric(bl_chr(x)))
-bl_cat <- function(x, lev) {
-  x <- bl_chr(x)
-  bad <- !is.na(x) & !(x %in% lev)
-  if (any(bad)) {
-    cat("CHECK: baseline values not in expected levels, set to missing: ",
-        paste(unique(x[bad]), collapse = ", "), "\n", file = stderr())
-  }
-  x[bad] <- NA_character_
-  factor(x, levels = lev)
-}
-
-
-# All the variables included in baseline data
-bl_spec <- list(
-  list(src = "BAS_Dem_Age", lab = "Age, years", type = "num"),
-  list(src = "BAS_Dem_Sex", lab = "Sex", type = "cat", lev = c("Female", "Male")),
-  list(src = "BAS_DIP_IJSite", lab = "Index joint", type = "cat", lev = c("Hip", "Knee")),
-  list(
-    src = "BAS_DIP_IJSide", lab = "Index joint side", 
-    type = "cat", lev = c("Left", "Right")),
-  list(src = "BAS_DIP_ProthesisType", lab = "Prosthesis type", type = "cat",
-       lev = c("Primary", "Revision")),
-  list(hdr = "Comorbidities, n (\\%)"),
-  list(src = "BAS_Comorb_DiabetesMellitus", lab = "Diabetes mellitus", type = "bin"),
-  list(src = "BAS_Comorb_ChronicRenalDisease",
-       lab = "Chronic renal disease (eGFR $<$ 50, not on dialysis)", type = "bin"),
-  list(src = "BAS_Comorb_EndStageRenalFailure",
-       lab = "End stage renal failure (haemodialysis or CAPD)", type = "bin"),
-  list(
-    src = "BAS_Comorb_MalignancyPast12M", 
-    lab = "Malignancy in past 12 months", type = "bin"),
-  list(src = "BAS_Comorb_Cirrhosis", lab = "Cirrhosis", type = "bin"),
-  list(src = "BAS_Comorb_RheumatoidArthritis", lab = "Rheumatoid arthritis", type = "bin"),
-  list(src = "BAS_Comorb_CorticosteroidPast6M",
-       lab = "Systemic corticosteroid use in past 6 months", type = "bin"),
-  list(
-    src = "BAS_Comorb_IatrogenicImmunoSupp", 
-    lab = "Iatrogenic immunosuppression", type = "bin"),
-  list(src = "BAS_Comorb_Cardiac", lab = "Congestive cardiac failure", type = "bin"),
-  list(src = "BAS_Comorb_Obesity", lab = "Obesity (BMI $\\geq$ 30)", type = "bin"),
-  list(
-    src = "BAS_CQI_ASAClassification", lab = "ASA classification", type = "cat",
-    lev = c("ASA I", "ASA II", "ASA III", "ASA IV", "ASA V", "ASA VI", "Not documented")),
-  list(src = "BAS_Microbio_CausativeOrganismIdentified",
-       lab = "Causative organism identified", type = "bin"),
-  list(hdr = "Blood tests"),
-  list(src = "BAS_Bloods_CRP_mgL", lab = "C-reactive protein, mg/L", type = "num"),
-  list(src = "BAS_Bloods_Antibio_SerumCreatinine_umolL",
-       lab = "Serum creatinine, $\\mu$mol/L", type = "num"),
-  list(src = "BAS_Bloods_Antibio_ALT_Entered", lab = "ALT", type = "num"),
-  list(src = "BAS_Bloods_Antibio_AST_Entered", lab = "AST", type = "num"),
-  list(src = "BAS_Bloods_Antibio_Bilirubin_umolL", lab = "Bilirubin, $\\mu$mol/L", type = "num"),
-  list(hdr = "Patient reported outcomes"),
-  list(src = "BAS_OHS_Score", lab = "Oxford Hip Score (0--48)", type = "num"),
-  list(src = "BAS_OKS_Score", lab = "Oxford Knee Score (0--48)", type = "num"),
-  list(src = "BAS_EQ5D5L_Score", lab = "EQ-5D-5L score", type = "num"),
-  list(src = "BAS_EQ5D5L_HealthToday", lab = "EQ-5D-5L health today (0--100)", type = "num")
-)
-bl_src <- unlist(lapply(bl_spec, `[[`, "src"))
-
-d_bl_raw <- l_out$l_raw$baseline[StudyPtID %in% d_pt$StudyPtID]
-stopifnot(!anyDuplicated(d_bl_raw$StudyPtID))
-
-d_c <- merge(
-  d_pt[, .(StudyPtID)],
-  d_bl_raw[, c("StudyPtID", bl_src), with = FALSE],
-  by = "StudyPtID", all.x = TRUE
-)
-d_c[, has_bl := StudyPtID %in% d_bl_raw$StudyPtID]
-# just formatting each of the fields
-for (s in bl_spec) {
-  if (is.null(s$src)) next
-  v <- d_c[[s$src]]
-  set(d_c, j = s$src, value = switch(
-    s$type,
-    num = bl_num(v),
-    cat = bl_cat(v, s$lev),
-    bin = bl_cat(v, c("No", "Yes"))
-  ))
-}
+# Baseline data are cleaned in baseline() in the extract script. l_bl$d_bl has
+# one row per randomised participant (a participant with no baseline record has
+# has_bl = FALSE and missing values) and l_cfg$bl$vars is the data dictionary:
+# the labels, types and groups of the variables in the order they are reported.
+d_c     <- l_bl$d_bl
+bl_vars <- copy(l_cfg$bl$vars)
 
 # a missing row is only shown for variables with missing values
-for (i in seq_along(bl_spec)) {
-  s <- bl_spec[[i]]
-  bl_spec[[i]]$show_miss <- !is.null(s$src) && anyNA(d_c[[s$src]])
-}
+bl_vars[, show_miss := vapply(name, function(nm) anyNA(d_c[[nm]]), logical(1))]
+
+# a heading is shown where a group of variables starts. A group of Yes/No
+# variables reports n (%) in its heading
+bl_vars[, new_group := !is.na(group) & (is.na(shift(group)) | group != shift(group))]
+bl_vars[, group_bin := all(type == "bin"), by = group]
 
 n_pct <- function(n, N) {
   if (N == 0) return("--")
@@ -665,37 +544,42 @@ n_pct <- function(n, N) {
 fmt_q <- function(x) format(round(x, 1), trim = TRUE, nsmall = 0)
 ind <- "\\hspace{1em}"
 
-bl_rows_spec <- function(s, x) {
+# the rows for one variable in the dictionary (v), summarised over the
+# participants in x
+bl_var_rows <- function(v, x) {
   
-  if (!is.null(s$hdr)) {
-    return(data.table(label = paste0("\\textbf{", s$hdr, "}"), val = ""))
-  }
-  v    <- x[[s$src]]
-  n_ok <- sum(!is.na(v))
+  vals <- x[[v$name]]
+  n_ok <- sum(!is.na(vals))
+  lab  <- tex_label(v$label)
+  lev  <- v$levels[[1]]
   
   r <- switch(
-    s$type,
+    v$type,
     # numbers
     num = data.table(
-      label = paste0(s$lab, ", median (Q1, Q3)"),
+      label = paste0(lab, ", median (Q1, Q3)"),
       val   = if (n_ok == 0) "--" else {
-        q <- quantile(v, c(0.25, 0.5, 0.75), na.rm = TRUE, names = FALSE)
+        q <- quantile(vals, c(0.25, 0.5, 0.75), na.rm = TRUE, names = FALSE)
         paste0(fmt_q(q[2]), " (", fmt_q(q[1]), ", ", fmt_q(q[3]), ")")
       }
     ),
     # factors
     cat = rbind(
-      data.table(label = paste0(s$lab, ", n (\\%)"), val = ""),
+      data.table(label = paste0(lab, ", n (\\%)"), val = ""),
       data.table(
-        label = paste0(ind, s$lev),
-        val   = vapply(s$lev, function(l) n_pct(sum(v == l, na.rm = TRUE), n_ok), "")
+        label = paste0(ind, tex_esc(lev)),
+        val   = vapply(lev, function(l) n_pct(sum(vals == l, na.rm = TRUE), n_ok), "")
       )
     ),
     # binary variables
-    bin = data.table(label = paste0(ind, s$lab), val = n_pct(sum(v == "Yes", na.rm = TRUE), n_ok))
+    bin = data.table(label = paste0(ind, lab), val = n_pct(sum(vals == "Yes", na.rm = TRUE), n_ok))
   )
-  if (isTRUE(s$show_miss)) {
-    r <- rbind(r, data.table(label = paste0(ind, "Missing, n"), val = fmt_n(sum(is.na(v)))))
+  if (v$show_miss) {
+    r <- rbind(r, data.table(label = paste0(ind, "Missing, n"), val = fmt_n(sum(is.na(vals)))))
+  }
+  if (v$new_group) {
+    hdr <- paste0(tex_label(v$group), if (v$group_bin) ", n (\\%)" else "")
+    r <- rbind(data.table(label = paste0("\\textbf{", hdr, "}"), val = ""), r)
   }
   r
 }
@@ -705,7 +589,7 @@ bl_rows <- function(ids) {
   rbind(
     data.table(label = "Randomised, n", val = fmt_n(nrow(x))),
     data.table(label = "Baseline form received, n (\\%)", val = n_pct(sum(x$has_bl), nrow(x))),
-    rbindlist(lapply(bl_spec, bl_rows_spec, x = x))
+    rbindlist(lapply(seq_len(nrow(bl_vars)), function(i) bl_var_rows(bl_vars[i], x)))
   )
 }
 
@@ -762,63 +646,21 @@ kbl(
 ```{r}
 #| label: micro-prep
 
-# Baseline microbiology is held in wide format in the baseline extract, with
-# up to three causative organisms per participant. As in baseline() in the
-# extract script it is reshaped to one row per participant and organism, but
-# here for all randomised participants so that the platform view is complete.
-# Participants with no organism have no rows.
-
-mic_cols <- grep("^BAS_Microbio_Org0[1-3]", names(d_bl_raw), value = TRUE)
-d_m <- d_bl_raw[, c("StudyPtID", mic_cols), with = FALSE]
-d_m[, (mic_cols) := lapply(.SD, as.character), .SDcols = mic_cols]
-
-d_org <- melt(
-  d_m, id.vars = "StudyPtID",
-  measure.vars = patterns(
-    name      = "^BAS_Microbio_Org0[1-3]OrganismName$",
-    specify   = "^BAS_Microbio_Org0[1-3]OrganismsSpecify$",
-    other     = "^BAS_Microbio_Org0[1-3]OrganismsSpecifyOther$",
-    pre_syn   = "^BAS_Microbio_Org0[1-3]Detected_PreOpSynovial$",
-    intra_syn = "^BAS_Microbio_Org0[1-3]Detected_IntraOpSynovial$",
-    intra_tis = "^BAS_Microbio_Org0[1-3]Detected_IntraOpTissue$",
-    blood     = "^BAS_Microbio_Org0[1-3]Detected_BloodCultures$"
-  ),
-  variable.name = "slot"
-)
-d_org[, label := bl_chr(name)]
-d_org <- d_org[!is.na(label)]
-det_cols <- c("pre_syn", "intra_syn", "intra_tis", "blood")
-d_org[, (det_cols) := lapply(.SD, function(v) tolower(bl_chr(v))), .SDcols = det_cols]
+# Causative organisms are made in baseline() in the extract script: one row per
+# participant and organism, so a participant has zero or more rows.
+d_org <- l_bl$d_micro
+det_cols <- c("pre_syn", "intra_syn", "intra_tis", "blood")   # sample types
 
 # organisms per participant (an organism is counted once per participant)
-d_org_u <- unique(d_org[, .(StudyPtID, label)])
+d_org_u <- unique(d_org[, .(StudyPtID, organism)])
 d_norg  <- d_org_u[, .(n_org = .N), by = StudyPtID]
-
-# consistency of the identified flag, the amount and the organism entries
-d_chk <- merge(
-  d_c[, .(StudyPtID, ident = BAS_Microbio_CausativeOrganismIdentified)],
-  merge(d_norg, d_bl_raw[, .(StudyPtID, amount = suppressWarnings(as.numeric(BAS_Microbio_CausativeOrganismAmount)))],
-        by = "StudyPtID", all = TRUE),
-  by = "StudyPtID", all.x = TRUE
-)
-d_chk[is.na(n_org), n_org := 0L]
-n_yes_none  <- d_chk[ident %in% "Yes" & n_org == 0, .N]
-n_org_notyes <- d_chk[!(ident %in% "Yes") & n_org > 0, .N]
-n_amt_diff  <- d_chk[ident %in% "Yes" & n_org > 0 & !is.na(amount) & amount != n_org, .N]
-if (n_yes_none + n_org_notyes + n_amt_diff > 0) {
-  cat("CHECK: microbiology: identified = Yes with no organism recorded:", n_yes_none,
-      "; organism recorded without identified = Yes:", n_org_notyes,
-      "; amount differs from number of organisms recorded:", n_amt_diff, "\n", file = stderr())
-}
-
-tex_esc <- function(x) gsub("([&%$#_{}])", "\\\\\\1", x)
 
 # organism rows: S. aureus (any) with its subtypes, then the other organisms,
 # ordered by the number of platform participants
-ids_yes_all <- d_c[BAS_Microbio_CausativeOrganismIdentified %in% "Yes", StudyPtID]
-org_freq <- d_org_u[StudyPtID %in% ids_yes_all, .N, by = label][order(-N, label)]
-lab_sau  <- org_freq[grepl("aureus", label, ignore.case = TRUE), label]
-lab_oth  <- setdiff(org_freq$label, lab_sau)
+ids_yes_all <- d_c[organism_identified %in% "Yes", StudyPtID]
+org_freq <- d_org_u[StudyPtID %in% ids_yes_all, .N, by = organism][order(-N, organism)]
+lab_sau  <- org_freq[grepl("aureus", organism, ignore.case = TRUE), organism]
+lab_oth  <- setdiff(org_freq$organism, lab_sau)
 
 org_def <- rbind(
   if (length(lab_sau) > 0) data.table(
@@ -830,7 +672,7 @@ org_def <- rbind(
 mic_rows <- function(ids) {
   x <- merge(
     d_c[StudyPtID %in% ids,
-        .(StudyPtID, has_bl, ident = BAS_Microbio_CausativeOrganismIdentified)],
+        .(StudyPtID, has_bl, ident = organism_identified)],
     d_norg, by = "StudyPtID", all.x = TRUE
   )
   x[is.na(n_org), n_org := 0L]
@@ -857,7 +699,7 @@ mic_rows <- function(ids) {
     data.table(label = "\\textbf{Organism, n (\\%) of those with an organism identified}", val = ""),
     data.table(
       label = paste0(strrep(ind, org_def$indent), tex_esc(org_def$label)),
-      val   = vapply(org_def$members, function(m) n_pct(o[label %in% m, uniqueN(StudyPtID)], n_yes), "")
+      val   = vapply(org_def$members, function(m) n_pct(o[organism %in% m, uniqueN(StudyPtID)], n_yes), "")
     )
   )
 }
@@ -879,16 +721,14 @@ Baseline microbiology is summarised for all randomised participants (@tbl-micro-
 det_cell <- function(v) {
   n_ok <- sum(!is.na(v))
   if (n_ok == 0) return("--")
-  k <- sum(v == "yes", na.rm = TRUE)
+  k <- sum(v, na.rm = TRUE)
   paste0(k, " (", fmt_pct(k / n_ok, 0), ")")
 }
 
 d_site_org <- d_org[, c(
   list(Records = .N),
   lapply(.SD, det_cell)
-), by = label, .SDcols = det_cols]
-d_site_org <- merge(d_site_org, org_freq[, .(label, N)], by = "label", all.x = TRUE)
-d_site_org[is.na(N), N := 0L]
+), by = .(label = organism), .SDcols = det_cols]
 setorder(d_site_org, -Records, label)
 
 d_site_tot <- d_org[, c(list(label = "All organism records", Records = .N), lapply(.SD, det_cell)),
@@ -941,41 +781,15 @@ kbl(
 
 # Primary outcome
 
-The primary outcome is treatment success at day 365 (window of 30 days either side) after platform randomisation. A participant is a success if they are alive, with no clinical and no microbiological evidence of infection of the index joint, and the prosthesis is in place. A participant is a failure if they have died, have clinical or microbiological evidence of infection, or the prosthesis is not in place. Where the outcome is not known to be a failure and any component is missing or unknown, the outcome is classed as missing once the participant has reached day 335, the start of the outcome window, and as not yet due before that. @tbl-po and @fig-po summarise the outcome for the platform and by arm within each domain. No formal comparisons are made.
+The primary outcome is treatment success at day `r po_day` (window of `r po_win` days either side) after platform randomisation. A participant is a success if they are alive, with no clinical and no microbiological evidence of infection of the index joint, and the prosthesis is in place. A participant is a failure if they have died, have clinical or microbiological evidence of infection, or the prosthesis is not in place. Where the outcome is not known to be a failure and any component is missing or unknown, the outcome is classed as missing once the participant has reached day `r po_open`, the start of the outcome window, and as not yet due before that. @tbl-po and @fig-po summarise the outcome for the platform and by arm within each domain. No formal comparisons are made.
 
 ```{r}
 #| label: po-prep
 
-win_open <- 365 - 30   # start of the day 365 window
-
-low  <- function(x) tolower(trimws(as.character(x)))
-d365 <- copy(l_out$l_raw$d365)
-d365[, StudyPtID := trimws(StudyPtID)]
-stopifnot(!anyDuplicated(d365$StudyPtID))
-
-d_o <- d365[StudyPtID %in% d_pt$StudyPtID, .(
-  StudyPtID,
-  alive  = low(D365_VitalStatus),
-  clin   = low(D365_VitalStatus_IJInfection_ClinicalEvidence),
-  micro  = low(D365_VitalStatus_IJInfection_MicrobioEvidence),
-  prosth = low(D365_VitalStatus_ProsthesisInPlace)
-)]
-d_o[, success := alive %in% "alive" & clin %in% "no" & micro %in% "no" & prosth %in% "yes"]
-d_o[, failure := alive %in% "dead" | clin %in% "yes" | micro %in% "yes" | prosth %in% "no"]
-
-d_po <- merge(
-  d_pt[, .(StudyPtID, dt_rand)],
-  d_o[, .(StudyPtID, success, failure)],
-  by = "StudyPtID", all.x = TRUE
-)
-d_po[, days := as.integer(dt_cut - dt_rand)]
-d_po[, status := fcase(
-  success %in% TRUE, "Success",
-  failure %in% TRUE, "Failure",
-  days >= win_open,  "Outcome missing",
-  default = "Not yet due"
-)]
-d_po[, status := factor(status, levels = c("Success", "Failure", "Outcome missing", "Not yet due"))]
+# The primary outcome is made in d365() in the extract script: one row per
+# randomised participant with its status (success, failure, outcome missing or
+# not yet due). Join l_pt$d_pt_dm to see it by domain and arm.
+d_po <- l_po$d_po
 
 po_row <- function(ids) {
   s  <- d_po[StudyPtID %in% ids, status]
@@ -1000,7 +814,7 @@ d_po_tab <- rbindlist(c(
 
 ```{r}
 #| label: tbl-po
-#| tbl-cap: "Primary outcome (treatment success at day 365) for randomised participants: platform and by domain and arm."
+#| tbl-cap: !expr 'paste0("Primary outcome (treatment success at day ", po_day, ") for randomised participants: platform and by domain and arm.")'
 #| tbl-pos: 'H'
 
 d_po_show <- copy(d_po_tab)
@@ -1019,8 +833,8 @@ kbl(
     general = paste(
       "Randomised = Success + Failure + Outcome missing + Not yet due.",
       "Known outcomes are Success plus Failure; the percentage is of known outcomes.",
-      "Outcome missing: day 335 reached and outcome not known.",
-      "Not yet due: day 335 not reached and outcome not known."
+      paste0("Outcome missing: day ", po_open, " reached and outcome not known."),
+      paste0("Not yet due: day ", po_open, " not reached and outcome not known.")
     ),
     general_title = "Note: ", threeparttable = TRUE, escape = TRUE
   )
@@ -1061,19 +875,9 @@ ggplot(d_fig, aes(N, arm_lab, fill = status)) +
 ```{r}
 #| label: pd-prep
 
-if (!("l_pd" %in% names(l_out))) {
-  stop("The derived data has no protocol deviation output (l_pd). ",
-       "Re-run R/data-analysis/data-analysis.R to create it.")
-}
-
-# deviations are recorded against the participant. Use the same set of
-# randomised participants as the rest of the report so denominators agree.
-d_pd <- l_out$l_pd$d_pd[StudyPtID %in% d_pt$StudyPtID]
-n_pd_out <- l_out$l_pd$d_pd[StudyPtID %in% ids_rand & !(StudyPtID %in% d_pt$StudyPtID), .N]
-if (n_pd_out > 0) {
-  cat("CHECK: ", n_pd_out, " deviations for randomised participants not in the participant list\n",
-      file = stderr())
-}
+# Protocol deviations are processed in deviations() in the extract script, which
+# removes test sites and restricts them to the reporting population.
+d_pd <- copy(l_pd$d_pd)
 d_pd[, type := fifelse(is.na(type), "Not recorded", type)]
 
 n_pd      <- nrow(d_pd)
