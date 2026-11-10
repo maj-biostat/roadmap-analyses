@@ -824,6 +824,47 @@ domain_rand <- function(l_dm, id_pop){
   d_dm_rand
 }
 
+# Participants allocated to each domain at platform randomisation: one row per
+# participant and domain, with the arm. This is the allocation held in the
+# participant list. The allocation is only revealed once entry into the domain
+# has been confirmed and consented, so these rows include allocations that are
+# not yet revealed. `revealed` is TRUE where the participant is in d_pt_dm.
+domain_alloc <- function(d_pt, d_pt_dm, l_dm_defn){
+  
+  d_alloc <- rbindlist(lapply(l_dm_defn, function(l_def){
+    trt_lu <- unlist(l_def$trt_map)
+    d <- data.table(
+      dm = l_def$dm,
+      StudyPtID = d_pt$StudyPtID,
+      code = clean_text(d_pt[[l_def$trt_col]])
+    )[!is.na(code)]
+    d[, arm := unname(trt_lu[match(code, names(trt_lu))])]
+    
+    if(anyNA(d$arm)){
+      message(
+        "Domain: ", l_def$label, ": ", sum(is.na(d$arm)), 
+        " allocation codes not in the arm mapping"
+      )
+    }
+    d[, code := NULL]
+  }))
+  
+  d_alloc[, revealed := FALSE]
+  d_alloc[d_pt_dm, on = .(StudyPtID, dm), revealed := TRUE]
+  
+  # a revealed allocation should always be in the allocation held in the list
+  n_not_alloc <- d_pt_dm[!d_alloc, on = .(StudyPtID, dm), .N]
+  if(n_not_alloc){
+    message("Domain: ", n_not_alloc, " revealed allocations are not in the pt list")
+  }
+  message(
+    "Domain: ", uniqueN(d_alloc$StudyPtID), " pts allocated to one or more domains, ",
+    uniqueN(d_alloc[revealed == TRUE, StudyPtID]), " with an allocation revealed"
+  )
+  
+  d_alloc
+}
+
 # Primary outcome: treatment success at day 365 after platform randomisation.
 # One row per participant in d_pt (the reporting population).
 #   success - alive, no clinical or microbiological evidence of infection of the
@@ -1135,6 +1176,10 @@ main <- function(){
   # the domains and trt that each pt in the reporting set are assigned to
   l_pt$d_pt_dm <- domain_rand(l_dm, id_pop)
   
+  # the domains and arms that each pt was allocated to at platform
+  # randomisation, and whether the allocation has been revealed
+  l_pt$d_pt_alloc <- domain_alloc(l_pt$d_pt, l_pt$d_pt_dm, l_cfg$dm_defn)
+  
   # primary outcome (day 365 +/- window). Measured on the participant, i.e.
   # at the platform level. To see it at the domain level do a join with 
   # l_pt$d_pt_dm
@@ -1162,7 +1207,8 @@ main <- function(){
   # The derived data. Each element is documented where it is created.
   #   l_cfg - the configuration, including the baseline data dictionary
   #   l_dat - screening and consort counts
-  #   l_pt  - d_pt_list, d_pt (reporting population), d_pt_dm (by domain)
+  #   l_pt  - d_pt_list, d_pt (reporting population), d_pt_dm (allocation
+  #           revealed, by domain), d_pt_alloc (allocated, by domain)
   #   l_dm  - one table per domain (eligibility outcome, arm)
   #   l_bl  - d_bl (baseline, one row per participant), d_micro (organisms)
   #   l_po  - d_po (primary outcome, one row per participant)

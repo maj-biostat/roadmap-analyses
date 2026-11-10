@@ -77,6 +77,7 @@ if (length(f_derived) == 0 || !file.exists(here(dir_derived, f_derived))) {
 # is described at the end of main() in the extract script.
 l_out <- qs2::qs_read(here(dir_derived, f_derived))
 l_cfg <- l_out$l_cfg   # configuration, including the baseline data dictionary
+l_dat <- l_out$l_dat   # screening counts
 l_pt  <- l_out$l_pt    # participants: reporting population and domain allocation
 l_bl  <- l_out$l_bl    # baseline and microbiology
 l_po  <- l_out$l_po    # primary outcome
@@ -199,7 +200,7 @@ if (is_dummy) {
 
 This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This first report describes enrolment to the platform and to each domain, the current length of follow-up, baseline characteristics and the primary outcome. It contains descriptive summaries only; no formal comparisons between arms are made.
 
-**Population.** Only randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded, or whose assessment is pending are not shown but are detailed in the consort diagram (provided separately).
+**Population.** Only randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded, or whose assessment is pending are not analysed further but are shown in the participant flow diagram (@fig-consort).
 
 **Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course. Participants may be randomised within several domains. Both the platform level and the domain level views are presented. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point.
 
@@ -216,6 +217,220 @@ kbl(d_dom_tab, format = "latex", booktabs = TRUE, align = "lll") |>
 ```
 
 **Data.** Data are from the extract dated `r fmt_date(dt_cut)` (extract label `r extract_dttm`).
+
+{{< pagebreak >}}
+
+# Participant flow
+
+```{r}
+#| label: consort-prep
+
+# Counts for the flow diagram. Screening comes from l_dat. Allocation at
+# platform randomisation is held in the participant list (l_pt$d_pt_alloc) and
+# is only revealed once entry into the domain is confirmed and consented.
+d_alloc <- l_pt$d_pt_alloc
+
+cs <- list(
+  screened  = l_dat$n_screened,
+  registry  = l_dat$n_registry,
+  not_elig  = l_dat$n_not_eligible,
+  pending   = l_dat$n_pending,
+  platform  = l_dat$n_randomised,   # randomised to the platform
+  pop       = n_rand,               # in this report (in the participant list)
+  allocated = uniqueN(d_alloc$StudyPtID),
+  entered   = uniqueN(d_alloc[revealed == TRUE, StudyPtID])
+)
+cs$not_rand    <- cs$screened - cs$platform
+cs$not_in_list <- cs$platform - cs$pop
+cs$no_alloc    <- cs$pop - cs$allocated
+cs$not_entered <- cs$allocated - cs$entered
+
+# each step should account for everyone from the step above
+stopifnot(
+  cs$not_rand == cs$registry + cs$not_elig + cs$pending,
+  cs$not_in_list >= 0, cs$no_alloc >= 0, cs$not_entered >= 0
+)
+
+# by domain: allocated at platform randomisation, and entered (the allocation has
+# been revealed). The numbers entered are those in the domain summaries.
+d_cs_dm <- merge(
+  unique(d_arm[, .(dm, dm_lab)]),
+  d_alloc[, .(n_alloc = .N, n_entered = sum(revealed)), by = dm],
+  by = "dm", all.x = TRUE
+)
+for (cc in c("n_alloc", "n_entered")) set(d_cs_dm, which(is.na(d_cs_dm[[cc]])), cc, 0L)
+d_cs_dm <- d_cs_dm[match(dm_codes, dm)]
+stopifnot(all(d_cs_dm$n_entered == d_dm_n[, .(n = sum(N)), keyby = dm][d_cs_dm$dm, n]))
+```
+
+```{r}
+#| label: consort-fn
+
+# Helpers to draw a flow diagram on a 0 to 100 canvas. A box is centred on (x, y)
+# with a bold title and plain body text, and its height follows the number of
+# lines of text. The text size and line height are in the same units as the canvas.
+fl_size <- 7.5 / .pt     # text size, 7.5pt
+fl_lh   <- 1.5           # height of a line of text
+fl_pad  <- 2.6           # space around the text in a box
+
+flow_box <- function(id, x, y, w, title, body = character(), fill = "white") {
+  n_t <- length(title)
+  n_b <- length(body)
+  h   <- (n_t + n_b) * fl_lh + fl_pad
+  top <- y + h / 2 - fl_pad / 2
+  data.table(
+    id = id, x = x, y = y, w = w, h = h, fill = fill,
+    title = paste(title, collapse = "\n"),
+    body  = paste(body, collapse = "\n"),
+    has_body = n_b > 0,
+    y_title = top - n_t * fl_lh / 2,
+    y_body  = top - n_t * fl_lh - n_b * fl_lh / 2
+  )
+}
+
+flow_seg <- function(x, y, xend, yend, arrow = TRUE) {
+  data.table(x = x, y = y, xend = xend, yend = yend, arrow = arrow)
+}
+
+flow_draw <- function(d_box, d_seg) {
+  ggplot() +
+    geom_segment(
+      data = d_seg[arrow == FALSE], aes(x = x, y = y, xend = xend, yend = yend),
+      linewidth = 0.3, colour = "grey30"
+    ) +
+    geom_segment(
+      data = d_seg[arrow == TRUE], aes(x = x, y = y, xend = xend, yend = yend),
+      linewidth = 0.3, colour = "grey30",
+      arrow = arrow(length = unit(1.6, "mm"), type = "closed")
+    ) +
+    geom_rect(
+      data = d_box,
+      aes(xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2, fill = fill),
+      colour = "grey30", linewidth = 0.3
+    ) +
+    geom_text(data = d_box, aes(x, y_title, label = title),
+              fontface = "bold", size = fl_size, lineheight = 1) +
+    geom_text(data = d_box[has_body == TRUE], aes(x, y_body, label = body),
+              size = fl_size, lineheight = 1) +
+    scale_fill_identity() +
+    scale_x_continuous(limits = c(0, 100), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(0, 100), expand = c(0, 0)) +
+    theme_void()
+}
+```
+
+@fig-consort shows the flow of participants from screening to randomisation to the platform, and from the platform to the domains and the arms within each domain. Participants can be allocated to more than one domain, so the numbers for the domains are not additive.
+
+```{r}
+#| label: fig-consort
+#| fig-cap: "Flow of participants from screening to the platform, the domains and the arms within each domain. Allocated: allocated to the domain at platform randomisation. Entered: entry into the domain confirmed and consented, so the allocation is revealed. The numbers for the arms are participants that have entered the domain."
+#| fig-width: 6.5
+#| fig-height: 7.6
+
+# ---- layout ----------------------------------------------------------------
+# main column of boxes from top to bottom. The box for those not in the
+# participant list is only needed if some randomised participants are missing.
+spine   <- c("screened", "platform", if (cs$not_in_list > 0) "pop",
+             "allocated", "entered", "domain", "arm")
+y_lv    <- setNames(seq(94, 8, length.out = length(spine)), spine)
+id_pop  <- if (cs$not_in_list > 0) "pop" else "platform"
+
+x0 <- 50;  w0 <- 38            # main column
+x_side <- 85;  w_side <- 27    # side boxes
+k    <- length(dm_codes)
+x_dm <- (seq_len(k) - 0.5) * 100 / k
+w_dm <- 100 / k - 1
+n_t  <- function(n) paste0("n = ", fmt_n(n))
+
+# ---- boxes -----------------------------------------------------------------
+l_box <- list(
+  flow_box("screened", x0, y_lv[["screened"]], w0, "Screened", n_t(cs$screened), "grey93"),
+  flow_box("platform", x0, y_lv[["platform"]], w0, "Randomised to the platform", n_t(cs$platform), "grey93"),
+  if (cs$not_in_list > 0) {
+    flow_box("pop", x0, y_lv[["pop"]], w0, "Randomised participants in this report", n_t(cs$pop), "grey93")
+  },
+  flow_box("allocated", x0, y_lv[["allocated"]], w0,
+           c("Allocated to one or", "more domains"), n_t(cs$allocated), "grey93"),
+  flow_box("entered", x0, y_lv[["entered"]], w0,
+           c("Entered one or more domains", "(allocation revealed)"), n_t(cs$entered), "grey93")
+)
+
+# domains, and the arms within each domain
+for (i in seq_len(k)) {
+  l_box <- c(l_box, list(flow_box(
+    paste0("dm", i), x_dm[i], y_lv[["domain"]], w_dm, as.character(d_cs_dm$dm_lab[i]),
+    c(paste("Allocated:", fmt_n(d_cs_dm$n_alloc[i])),
+      paste("Entered:", fmt_n(d_cs_dm$n_entered[i]))),
+    "#DCEAF5"
+  )))
+  d_a <- d_dm_n[dm == d_cs_dm$dm[i]][order(arm_pos)]
+  w_a <- w_dm / nrow(d_a)
+  x_a <- x_dm[i] + (seq_len(nrow(d_a)) - (nrow(d_a) + 1) / 2) * w_a
+  for (j in seq_len(nrow(d_a))) {
+    l_box <- c(l_box, list(flow_box(
+      paste0("arm", i, "_", j), x_a[j], y_lv[["arm"]], w_a - 0.6,
+      strsplit(paste(strwrap(d_a$arm[j], 13), collapse = "\n"), "\n")[[1]],
+      n_t(d_a$N[j]), c("#CFE3F2", "#FBE8C4")[d_a$arm_pos[j]]
+    )))
+  }
+}
+
+# side boxes, between the two boxes that they sit between
+l_side <- Filter(Negate(is.null), list(
+  list(from = "screened", to = "platform",
+       title = paste0("Not randomised (n = ", fmt_n(cs$not_rand), ")"),
+       body = c(paste("Registry:", fmt_n(cs$registry)),
+                paste("Not eligible:", fmt_n(cs$not_elig)),
+                paste("Assessment pending:", fmt_n(cs$pending)))),
+  if (cs$not_in_list > 0) {
+    list(from = "platform", to = "pop",
+         title = "Not in the participant list", body = n_t(cs$not_in_list))
+  },
+  list(from = id_pop, to = "allocated",
+       title = "Not allocated to a domain", body = n_t(cs$no_alloc)),
+  list(from = "allocated", to = "entered",
+       title = "Allocation not revealed", body = n_t(cs$not_entered))
+))
+
+d_box <- rbindlist(l_box)
+top_of    <- function(bid) d_box[id == bid, y + h / 2]
+bottom_of <- function(bid) d_box[id == bid, y - h / 2]
+
+# ---- connectors ------------------------------------------------------------
+l_seg <- list()
+main  <- spine[spine %in% c("screened", "platform", "pop", "allocated", "entered")]
+
+# down the main column, with a side box branching from each step
+for (i in seq_len(length(main) - 1)) {
+  l_seg[[length(l_seg) + 1]] <- flow_seg(x0, bottom_of(main[i]), x0, top_of(main[i + 1]))
+}
+for (sd in l_side) {
+  y_mid <- (bottom_of(sd$from) + top_of(sd$to)) / 2
+  d_box <- rbind(d_box, flow_box(paste0("side_", sd$from), x_side, y_mid, w_side, sd$title, sd$body, "white"))
+  l_seg[[length(l_seg) + 1]] <- flow_seg(x0, y_mid, x_side - w_side / 2, y_mid)
+}
+
+# entered -> each domain
+y_bus <- (bottom_of("entered") + max(top_of("dm1"))) / 2
+l_seg[[length(l_seg) + 1]] <- flow_seg(x0, bottom_of("entered"), x0, y_bus, arrow = FALSE)
+l_seg[[length(l_seg) + 1]] <- flow_seg(min(x_dm), y_bus, max(x_dm), y_bus, arrow = FALSE)
+for (i in seq_len(k)) {
+  l_seg[[length(l_seg) + 1]] <- flow_seg(x_dm[i], y_bus, x_dm[i], top_of(paste0("dm", i)))
+}
+
+# each domain -> its arms
+for (i in seq_len(k)) {
+  d_arms <- d_box[grepl(paste0("^arm", i, "_"), id)]
+  y_bus2 <- (bottom_of(paste0("dm", i)) + max(d_arms$y + d_arms$h / 2)) / 2
+  l_seg[[length(l_seg) + 1]] <- flow_seg(x_dm[i], bottom_of(paste0("dm", i)), x_dm[i], y_bus2, arrow = FALSE)
+  l_seg[[length(l_seg) + 1]] <- flow_seg(min(d_arms$x), y_bus2, max(d_arms$x), y_bus2, arrow = FALSE)
+  for (j in seq_len(nrow(d_arms))) {
+    l_seg[[length(l_seg) + 1]] <- flow_seg(d_arms$x[j], y_bus2, d_arms$x[j], d_arms$y[j] + d_arms$h[j] / 2)
+  }
+}
+
+flow_draw(d_box, rbindlist(l_seg))
+```
 
 # Platform enrolment
 
@@ -265,15 +480,8 @@ p_cum / p_mon
 ```{r}
 #| label: combos
 
-dm_asg_cols <- paste0("PT_Assigned_Domain", dm_codes)
-
-d_asg <- melt(
-  d_pt[, c("StudyPtID", dm_asg_cols), with = FALSE],
-  id.vars = "StudyPtID", variable.name = "dm", value.name = "code"
-)
-d_asg[, dm := factor(sub("PT_Assigned_Domain", "", dm), levels = dm_codes)]
-# only take rows with a treatment assignment code
-d_asg <- d_asg[!is.na(code) & nzchar(code)]
+# the domains that each participant was allocated to at platform randomisation
+d_asg <- l_pt$d_pt_alloc[, .(StudyPtID, dm = factor(dm, levels = dm_codes))]
 setorder(d_asg, StudyPtID, dm)
 
 
@@ -286,11 +494,11 @@ n_in_dm   <- nrow(d_combo_pt)
 n_no_dm   <- n_rand - n_in_dm
 ```
 
-Of the `r fmt_n(n_rand)` randomised participants, `r fmt_n(n_in_dm)` (`r fmt_pct(n_in_dm / n_rand, 1)`) have been randomised within at least one domain and `r fmt_n(n_no_dm)` have not yet been randomised within a domain. @fig-combos shows the combinations of domains in which participants have been randomised.
+Of the `r fmt_n(n_rand)` randomised participants, `r fmt_n(n_in_dm)` (`r fmt_pct(n_in_dm / n_rand, 1)`) have been allocated to at least one domain at platform randomisation and `r fmt_n(n_no_dm)` have not been allocated to a domain. @fig-combos shows the combinations of domains that participants have been allocated to.
 
 ```{r}
 #| label: fig-combos
-#| fig-cap: "Combinations of domains in which randomised participants have been randomised (participants randomised within at least one domain). SD = Surgical, AC = AB Choice, DA = AB Dur A, DB = AB Dur B."
+#| fig-cap: "Combinations of domains that randomised participants have been allocated to at platform randomisation (participants allocated to at least one domain). SD = Surgical, AC = AB Choice, DA = AB Dur A, DB = AB Dur B."
 #| fig-width: 6.5
 #| fig-height: 3.2
 
@@ -298,7 +506,7 @@ ggplot(d_combo, aes(N, combo)) +
   geom_col(fill = "#0072B2", width = 0.7) +
   geom_text(aes(label = fmt_n(N)), hjust = -0.2, size = 2.8) +
   scale_x_continuous(expand = expansion(mult = c(0, 0.12))) +
-  labs(x = "Participants", y = "Domains randomised within")
+  labs(x = "Participants", y = "Domains allocated")
 ```
 
 ## Randomisation by study site
@@ -1047,7 +1255,6 @@ kbl(
 
 <!--
 Planned sections (not yet populated):
-  - CONSORT diagram
   - Study withdrawal
   - Safety reporting (limited per protocol; scope to be agreed)
 -->
