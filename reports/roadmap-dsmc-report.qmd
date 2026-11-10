@@ -81,6 +81,7 @@ l_dat <- l_out$l_dat   # screening counts
 l_pt  <- l_out$l_pt    # participants: reporting population and domain allocation
 l_bl  <- l_out$l_bl    # baseline and microbiology
 l_po  <- l_out$l_po    # primary outcome
+l_d100 <- l_out$l_d100 # day 100 form
 l_pd  <- l_out$l_pd    # protocol deviations
 
 cat("Report built from: ", f_derived, "\n", file = stderr())
@@ -172,6 +173,20 @@ d_dm_n[is.na(N), N := 0L]
 d_dm_n[, N_dm := sum(N), by = dm]
 d_dm_n[, prop := fifelse(N_dm > 0, N / N_dm, NA_real_)]
 setorder(d_dm_n, dm_lab, arm_pos)
+
+# the groups that outcomes are summarised over: the platform, then each arm
+# within each domain
+d_grp <- rbind(
+  data.table(Domain = "Platform", Arm = "All randomised", ids = list(d_pt$StudyPtID)),
+  data.table(
+    Domain = as.character(d_arm$dm_lab),
+    Arm    = d_arm$arm,
+    ids    = mapply(
+      function(code, a) d_dm[dm == code & arm == a, StudyPtID],
+      d_arm$dm, d_arm$arm, SIMPLIFY = FALSE
+    )
+  )
+)
 ```
 
 ```{r}
@@ -198,11 +213,11 @@ if (is_dummy) {
 }
 ```
 
-This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This first report describes enrolment to the platform and to each domain, the current length of follow-up, baseline characteristics and the primary outcome. It contains descriptive summaries only; no formal comparisons between arms are made.
+This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This report describes enrolment into the platform and domains, the current length of follow-up, baseline characteristics, the primary outcome and its components, and the antibiotic changes and suspected adverse reactions recorded at day `r l_cfg$d100$day`. Only descriptive summaries only are provided.
 
-**Population.** Only randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded, or whose assessment is pending are not analysed further but are shown in the participant flow diagram (@fig-consort).
+**Population.** Randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded due to being invalid or test records, or whose assessment is pending are not analysed further but are shown in the participant flow diagram (@fig-consort).
 
-**Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course. Participants may be randomised within several domains. Both the platform level and the domain level views are presented. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point.
+**Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course. Specifically, participants receiving one-stage revision may enter into the antibiotic duration (AB Dur A) domain and participants receiving two-stage revision may enter into the extended prophylaxis domain (AB Dur B). Participants may be randomised within valid combinations of domains. Both the platform level and the domain level views are presented. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point.
 
 ```{r}
 #| label: tbl-domains
@@ -728,22 +743,11 @@ ggplot(d_wk_n, aes(wk, N)) +
 # Baseline characteristics
 
 ```{r}
-#| label: bl-prep
+#| label: dict-fn
 
-# Baseline data are cleaned in baseline() in the extract script. l_bl$d_bl has
-# one row per randomised participant (a participant with no baseline record has
-# has_bl = FALSE and missing values) and l_cfg$bl$vars is the data dictionary:
-# the labels, types and groups of the variables in the order they are reported.
-d_c     <- l_bl$d_bl
-bl_vars <- copy(l_cfg$bl$vars)
-
-# a missing row is only shown for variables with missing values
-bl_vars[, show_miss := vapply(name, function(nm) anyNA(d_c[[nm]]), logical(1))]
-
-# a heading is shown where a group of variables starts. A group of Yes/No
-# variables reports n (%) in its heading
-bl_vars[, new_group := !is.na(group) & (is.na(shift(group)) | group != shift(group))]
-bl_vars[, group_bin := all(type == "bin"), by = group]
+# Helpers for a table of the variables in a data dictionary (see dict_var() in
+# the extract script), with a column for each group of participants. They are
+# used for the baseline data and for the day 100 form.
 
 n_pct <- function(n, N) {
   if (N == 0) return("--")
@@ -752,19 +756,43 @@ n_pct <- function(n, N) {
 fmt_q <- function(x) format(round(x, 1), trim = TRUE, nsmall = 0)
 ind <- "\\hspace{1em}"
 
+# the participants in x that a variable applies to: all of them, or those with Yes
+# for the variable it depends on
+dict_subset <- function(when, x) {
+  if (is.na(when)) x else x[x[[when]] %in% "Yes"]
+}
+
+# prepare a dictionary for the participants in d
+dict_prep <- function(vars, d) {
+  vars <- copy(vars)
+
+  # a missing row is only shown for variables with missing values
+  vars[, show_miss := FALSE]
+  for (i in seq_len(nrow(vars))) {
+    x <- dict_subset(vars$when[i], d)
+    set(vars, i, "show_miss", vars$type[i] != "text" && anyNA(x[[vars$name[i]]]))
+  }
+
+  # a heading is shown where a group of variables starts. A group of Yes/No
+  # variables reports n (%) in its heading
+  vars[, new_group := !is.na(group) & (is.na(shift(group)) | group != shift(group))]
+  vars[, group_bin := all(type %in% c("bin", "text")), by = group]
+  vars
+}
+
 # the rows for one variable in the dictionary (v), summarised over the
 # participants in x
-bl_var_rows <- function(v, x) {
-  
+dict_var_rows <- function(v, x) {
+
+  x    <- dict_subset(v$when, x)
   vals <- x[[v$name]]
   n_ok <- sum(!is.na(vals))
   lab  <- tex_label(v$label)
-  lev  <- v$levels[[1]]
-  
+
   r <- switch(
     v$type,
-    # numbers
-    num = data.table(
+    # numbers, and dates as the number of days
+    num = , days = data.table(
       label = paste0(lab, ", median (Q1, Q3)"),
       val   = if (n_ok == 0) "--" else {
         q <- quantile(vals, c(0.25, 0.5, 0.75), na.rm = TRUE, names = FALSE)
@@ -775,12 +803,17 @@ bl_var_rows <- function(v, x) {
     cat = rbind(
       data.table(label = paste0(lab, ", n (\\%)"), val = ""),
       data.table(
-        label = paste0(ind, tex_esc(lev)),
-        val   = vapply(lev, function(l) n_pct(sum(vals == l, na.rm = TRUE), n_ok), "")
+        label = paste0(ind, tex_esc(levels(vals))),
+        val   = vapply(levels(vals), function(l) n_pct(sum(vals == l, na.rm = TRUE), n_ok), "")
       )
     ),
     # binary variables
-    bin = data.table(label = paste0(ind, lab), val = n_pct(sum(vals == "Yes", na.rm = TRUE), n_ok))
+    bin = data.table(label = paste0(ind, lab), val = n_pct(sum(vals == "Yes", na.rm = TRUE), n_ok)),
+    # free text: only whether there is any is summarised
+    text = data.table(
+      label = if (v$group_bin) paste0(ind, lab) else paste0(lab, ", n (\\%)"),
+      val   = n_pct(n_ok, nrow(x))
+    )
   )
   if (v$show_miss) {
     r <- rbind(r, data.table(label = paste0(ind, "Missing, n"), val = fmt_n(sum(is.na(vals)))))
@@ -792,13 +825,21 @@ bl_var_rows <- function(v, x) {
   r
 }
 
-bl_rows <- function(ids) {
-  x <- d_c[StudyPtID %in% ids]
-  rbind(
-    data.table(label = "Randomised, n", val = fmt_n(nrow(x))),
-    data.table(label = "Baseline form received, n (\\%)", val = n_pct(sum(x$has_bl), nrow(x))),
-    rbindlist(lapply(seq_len(nrow(bl_vars)), function(i) bl_var_rows(bl_vars[i], x)))
-  )
+# A table with a column for each set of participant ids in ids_list. The rows
+# are the top rows, which are a function of the participants in the column,
+# then the rows for each variable in the dictionary. The variables are
+# summarised over the participants that are kept by keep().
+dict_cols <- function(d, vars, top_rows, ids_list, keep = identity) {
+  cols <- lapply(ids_list, function(ids) {
+    x <- d[StudyPtID %in% ids]
+    rbind(
+      top_rows(x),
+      rbindlist(lapply(seq_len(nrow(vars)), function(i) dict_var_rows(vars[i], keep(x))))
+    )
+  })
+  d_tab <- data.table(Characteristic = cols[[1]]$label)
+  for (i in seq_along(cols)) set(d_tab, j = paste0("g", i), value = cols[[i]]$val)
+  d_tab
 }
 
 # population/sample groups: platform, then each arm within each domain
@@ -810,17 +851,30 @@ for (code in dm_codes) {
     grp_nm <- c(grp_nm, a)
   }
 }
-# summary by each set of population ids
-d_bl_cols <- lapply(grp_ids, bl_rows)
-d_bl_tab  <- data.table(Characteristic = d_bl_cols[[1]]$label)
-for (i in seq_along(d_bl_cols)) {
-  set(d_bl_tab, j = paste0("g", i), value = d_bl_cols[[i]]$val)
-}
+```
+
+```{r}
+#| label: bl-prep
+
+# Baseline data are cleaned in baseline() in the extract script. l_bl$d_bl has
+# one row per randomised participant (a participant with no baseline record has
+# has_bl = FALSE and missing values) and l_cfg$bl$vars is the data dictionary:
+# the labels, types and groups of the variables in the order they are reported.
+d_c     <- l_bl$d_bl
+bl_vars <- dict_prep(l_cfg$bl$vars, d_c)
+
+d_bl_tab <- dict_cols(
+  d_c, bl_vars, ids_list = grp_ids,
+  top_rows = function(x) rbind(
+    data.table(label = "Randomised, n", val = fmt_n(nrow(x))),
+    data.table(label = "Baseline form received, n (\\%)", val = n_pct(sum(x$has_bl), nrow(x)))
+  )
+)
 ```
 
 ## Participant characteristics
 
-Baseline characteristics are shown in @tbl-baseline for all randomised participants and for each arm within each domain. Participants appear in more than one domain column where they have been randomised within several domains. Continuous variables are summarised as the median (first and third quartiles) and categorical variables as the number (percentage) of participants with a recorded value. Missing values are counted separately. Participants with no baseline record are counted as missing for every variable.
+Baseline characteristics are shown in @tbl-baseline for all randomised participants and for each arm within each domain. Participants are represented in more than one domain column where they have been randomised within several domains. Continuous variables are summarised as the median (first and third quartiles) and categorical variables as the number (percentage) of participants with a recorded value. Missing values are counted separately. Participants with no baseline record are counted as missing for every variable.
 
 ```{=latex}
 \begin{landscape}
@@ -917,7 +971,7 @@ d_mic_tab  <- data.table(Characteristic = d_mic_cols[[1]]$label)
 for (i in seq_along(d_mic_cols)) set(d_mic_tab, j = paste0("g", i), value = d_mic_cols[[i]]$val)
 ```
 
-Baseline microbiology is summarised for all randomised participants (@tbl-micro-site) and for each arm within each domain (@tbl-micro). A participant has a causative organism identified when this is recorded as Yes; up to three organisms can be recorded for a participant. Organism counts are numbers of participants, so a participant with more than one organism is counted against each and the percentages can sum to more than 100%. Percentages for the number of organisms and for each organism are of participants with a causative organism identified. *Staphylococcus aureus* (any) combines the methicillin resistant, methicillin susceptible and penicillin susceptible categories. Species recorded in the specify fields are not tabulated separately.
+Baseline microbiology is summarised for all randomised participants (@tbl-micro-site) and for each arm within each domain (@tbl-micro). A participant has a causative organism identified when this is recorded as Yes; up to three organisms were recorded for a participant. Organism counts are numbers of participants, so a participant with more than one organism is counted against each and the percentages can sum to more than 100%. Percentages for the number of organisms and for each organism are of participants with a causative organism identified. *Staphylococcus aureus* (any) in @tbl-micro-site combines the methicillin resistant, methicillin susceptible and penicillin susceptible categories. Species recorded in the specify fields are not tabulated separately.
 
 @tbl-micro-site shows where each organism was detected, across all randomised participants. Each row counts organism records, so a participant with several organisms contributes several records, and a record can be positive in more than one type of sample.
 
@@ -955,7 +1009,7 @@ kbl(
 ) |>
   add_header_above(c(" " = 2, "Detected in, n (% of records)" = 4)) |>
   kable_styling(font_size = 8) |>
-  column_spec(1, width = "6.4cm") |>
+  column_spec(1, width = "5.4cm") |>
   row_spec(nrow(d_site_org_tab) - 1, extra_latex_after = "\\midrule") |>
   row_spec(nrow(d_site_org_tab), bold = TRUE)
 ```
@@ -989,7 +1043,7 @@ kbl(
 
 # Primary outcome
 
-The primary outcome is treatment success at day `r po_day` (window of `r po_win` days either side) after platform randomisation. A participant is a success if they are alive, with no clinical and no microbiological evidence of infection of the index joint, and the prosthesis is in place. A participant is a failure if they have died, have clinical or microbiological evidence of infection, or the prosthesis is not in place. Where the outcome is not known to be a failure and any component is missing or unknown, the outcome is classed as missing once the participant has reached day `r po_open`, the start of the outcome window, and as not yet due before that. @tbl-po and @fig-po summarise the outcome for the platform and by arm within each domain. No formal comparisons are made.
+The primary outcome is treatment success at day `r po_day` (window of `r po_win` days either side) after platform randomisation. A participant is a success if they are alive, with no clinical and no microbiological evidence of infection of the index joint, and the prosthesis is in place. A participant is a failure if they have died, have clinical or microbiological evidence of infection, or the prosthesis is not in place. Where the outcome is not known to be a failure and any component is missing or unknown, the outcome would be classed as *missing* once the participant has reached day `r po_open` and as *not yet due* for any time before that. @tbl-po and @fig-po summarise the outcome for the platform and by arm within each domain.
 
 ```{r}
 #| label: po-prep
@@ -1077,6 +1131,276 @@ ggplot(d_fig, aes(N, arm_lab, fill = status)) +
   labs(x = "Proportion of participants", y = NULL)
 ```
 
+
+# Components of the primary outcome
+
+Treatment success is a composite of four components recorded at day `r po_day`: vital status, clinical evidence of infection of the index joint, microbiological evidence of infection of the index joint and whether the prosthesis is in place. A participant is a treatment success if they are alive, with no clinical and no microbiological evidence of infection, and the prosthesis is in place. A participant is a failure if any one component has the opposite response. Each component is summarised in turn for the platform and by arm within each domain.
+
+For each component the tables show the number of participants with each response. A participant without a response is counted as Not recorded once day `r po_open` has been reached, the start of the outcome window, and as Not yet due before that. Unknown is a recorded response of unknown. The final column is the percentage of known responses, which are those other than unknown, that have the event described in the note to the table.
+
+```{r}
+#| label: comp-prep
+
+# The components are defined in l_cfg$d365$components and made in d365() in the
+# extract script. l_po$d_po_comp has one row per participant and component, with
+# the response or Not recorded / Not yet due.
+d_po_comp <- l_po$d_po_comp
+d_comps   <- copy(l_cfg$d365$components)
+
+comp_cap <- function(what) paste0(what, " at day ", po_day, ": platform and by domain and arm.")
+
+# counts of each response for one component, for each group in d_grp
+comp_table <- function(comp) {
+  v   <- d_comps[name == comp]
+  d   <- d_po_comp[component == comp]
+  lev <- c(v$levels[[1]], "Not recorded", "Not yet due")   # all of the responses
+
+  d_tab <- rbindlist(lapply(seq_len(nrow(d_grp)), function(i) {
+    r <- factor(d[StudyPtID %in% d_grp$ids[[i]], response], levels = lev)
+    n <- setNames(as.integer(table(r)), lev)
+    known <- n[[v$good]] + n[[v$bad]]
+    c(
+      list(Randomised = length(r)), as.list(n),
+      list(pct = if (known > 0) gsub("%", "\\\\%", fmt_pct(n[[v$bad]] / known, 1)) else "--")
+    )
+  }))
+  count_cols <- setdiff(names(d_tab), "pct")
+  d_tab[, (count_cols) := lapply(.SD, fmt_n), .SDcols = count_cols]
+  d_tab <- cbind(data.table(Domain = tex_esc(d_grp$Domain), Arm = tex_esc(d_grp$Arm)), d_tab)
+
+  kbl(
+    d_tab, format = "latex", booktabs = TRUE, escape = FALSE,
+    align = c("l", "l", rep("r", ncol(d_tab) - 2)),
+    col.names = linebreak(
+      c("Domain", "Arm", "Randomised", sub(" ", "\n", lev, fixed = TRUE), "Event among\nknown, \\%"),
+      align = "c"
+    )
+  ) |>
+    kable_styling(font_size = 8) |>
+    collapse_rows(columns = 1, latex_hline = "major", valign = "top") |>
+    footnote(
+      general = paste0(
+        "Event: ", v$event, ". Known responses are ", v$good, " and ", v$bad, ". ",
+        "Randomised is the sum of the responses, Not recorded and Not yet due."
+      ),
+      general_title = "Note: ", threeparttable = TRUE
+    )
+}
+
+# the responses of one component by arm within each domain, as proportions
+comp_fig <- function(comp) {
+  v   <- d_comps[name == comp]
+  d   <- d_po_comp[component == comp]
+  lev <- c(v$levels[[1]], "Not recorded", "Not yet due")   # all of the responses
+
+  d_f <- rbindlist(lapply(seq_len(nrow(d_grp))[-1], function(i) {
+    x <- d[StudyPtID %in% d_grp$ids[[i]], .N, by = response]
+    x <- merge(data.table(response = lev), x, by = "response", all.x = TRUE)
+    x[is.na(N), N := 0L]
+    x[, `:=`(
+      Domain  = d_grp$Domain[i],
+      arm_lab = paste0(d_grp$Arm[i], "\n(n = ", length(d_grp$ids[[i]]), ")")
+    )]
+  }))
+  d_f[, response := factor(response, levels = lev)]
+  d_f[, Domain := factor(Domain, levels = unique(d_grp$Domain[-1]))]
+  d_f[, arm_lab := factor(arm_lab, levels = rev(unique(arm_lab)))]
+
+  # good, bad and unknown responses, then not recorded and not yet due
+  cols <- setNames(c("#009E73", "#D55E00", "#56B4E9", "#999999", "#E3E3E3"), lev)
+
+  ggplot(d_f, aes(N, arm_lab, fill = response)) +
+    geom_col(position = position_fill(reverse = TRUE), width = 0.7) +
+    facet_wrap(vars(Domain), ncol = 2, scales = "free_y") +
+    scale_x_continuous(labels = function(z) paste0(100 * z, "%"), expand = expansion(mult = c(0, 0.02))) +
+    scale_fill_manual(values = cols, name = NULL, drop = FALSE) +
+    labs(x = "Proportion of participants", y = NULL)
+}
+```
+
+## Vital status
+
+@tbl-comp-vs and @fig-comp-vs summarise the vital status of randomised participants at day `r po_day`.
+
+```{r}
+#| label: tbl-comp-vs
+#| tbl-cap: !expr comp_cap("Vital status")
+#| tbl-pos: 'H'
+
+comp_table("vital_status")
+```
+
+```{r}
+#| label: fig-comp-vs
+#| fig-cap: "Vital status of randomised participants by arm within each domain (proportion of participants randomised to the arm)."
+#| fig-width: 6.5
+#| fig-height: 3.3
+
+comp_fig("vital_status")
+```
+
+@tbl-deaths shows the participants that have died and the number of days from platform randomisation to death where the date of death is recorded. The cause of death is recorded as free text and is not summarised.
+
+```{r}
+#| label: tbl-deaths
+#| tbl-cap: "Deaths and the days from platform randomisation to death: platform and by domain and arm."
+#| tbl-pos: 'H'
+
+deaths_row <- function(ids) {
+  x <- d_po[StudyPtID %in% ids & vital_status %in% "Dead"]
+  k <- x[!is.na(days_to_death), days_to_death]
+  data.table(
+    dead  = fmt_n(nrow(x)),
+    dated = fmt_n(length(k)),
+    days  = if (length(k) > 0) paste0(fmt_q(median(k)), " (", min(k), ", ", max(k), ")") else "--"
+  )
+}
+
+d_deaths <- cbind(d_grp[, .(Domain, Arm)], rbindlist(lapply(d_grp$ids, deaths_row)))
+
+kbl(
+  d_deaths, format = "latex", booktabs = TRUE, align = "llrrr",
+  col.names = c("Domain", "Arm", "Deaths", "Date of death recorded",
+                "Days from randomisation to death, median (min, max)")
+) |>
+  kable_styling(font_size = 8) |>
+  column_spec(4, width = "2.4cm") |>
+  column_spec(5, width = "3.8cm") |>
+  collapse_rows(columns = 1, latex_hline = "major", valign = "top")
+```
+
+## Clinical evidence of infection
+
+@tbl-comp-clin and @fig-comp-clin summarise whether there is clinical evidence of infection of the index joint at day `r po_day`.
+
+```{r}
+#| label: tbl-comp-clin
+#| tbl-cap: !expr comp_cap("Clinical evidence of infection")
+#| tbl-pos: 'H'
+
+comp_table("infc_clin")
+```
+
+```{r}
+#| label: fig-comp-clin
+#| fig-cap: "Clinical evidence of infection of randomised participants by arm within each domain (proportion of participants randomised to the arm)."
+#| fig-width: 6.5
+#| fig-height: 3.3
+
+comp_fig("infc_clin")
+```
+
+## Microbiological evidence of infection
+
+@tbl-comp-micro and @fig-comp-micro summarise whether there is microbiological evidence of infection of the index joint at day `r po_day`.
+
+```{r}
+#| label: tbl-comp-micro
+#| tbl-cap: !expr comp_cap("Microbiological evidence of infection")
+#| tbl-pos: 'H'
+
+comp_table("infc_micro")
+```
+
+```{r}
+#| label: fig-comp-micro
+#| fig-cap: "Microbiological evidence of infection of randomised participants by arm within each domain (proportion of participants randomised to the arm)."
+#| fig-width: 6.5
+#| fig-height: 3.3
+
+comp_fig("infc_micro")
+```
+
+## Prosthesis in place
+
+@tbl-comp-prosth and @fig-comp-prosth summarise whether the prosthesis is in place at day `r po_day`.
+
+```{r}
+#| label: tbl-comp-prosth
+#| tbl-cap: !expr comp_cap("Prosthesis in place")
+#| tbl-pos: 'H'
+
+comp_table("prosth_in_place")
+```
+
+```{r}
+#| label: fig-comp-prosth
+#| fig-cap: "Prosthesis in place for randomised participants by arm within each domain (proportion of participants randomised to the arm)."
+#| fig-width: 6.5
+#| fig-height: 3.3
+
+comp_fig("prosth_in_place")
+```
+
+# Antibiotic changes and suspected adverse reactions
+
+```{r}
+#| label: ar-prep
+
+# The day 100 form is processed in d100() in the extract script: l_d100$d_ar has
+# one row per randomised participant (has_d100 is FALSE if there is no form) and
+# l_cfg$d100$vars is the data dictionary.
+d_ar    <- l_d100$d_ar
+ar_day  <- l_cfg$d100$day
+
+# the variables are summarised over the participants that have a day 100 form
+ar_vars <- dict_prep(l_cfg$d100$vars, d_ar[has_d100 == TRUE])
+
+d_ar_tab <- dict_cols(
+  d_ar, ar_vars, ids_list = grp_ids,
+  # the participants without a form are not in the summaries of the variables
+  keep = function(x) x[has_d100 == TRUE],
+  top_rows = function(x) rbind(
+    data.table(label = "Randomised, n", val = fmt_n(nrow(x))),
+    data.table(
+      label = paste0("Day ", ar_day, " reached, n (\\%)"),
+      val   = n_pct(sum(x$days_rand >= ar_day), nrow(x))
+    ),
+    data.table(
+      label = paste0("Day ", ar_day, " form received, n (\\% of those that reached day ", ar_day, ")"),
+      val   = n_pct(sum(x$has_d100), sum(x$days_rand >= ar_day))
+    ),
+    data.table(
+      label = "Form complete, n (\\% of forms received)",
+      val   = n_pct(sum(x$complete %in% TRUE), sum(x$has_d100))
+    )
+  )
+)
+n_ar_forms <- d_ar[has_d100 == TRUE, .N]
+```
+
+The day `r ar_day` form records any change to, or cessation of, antibiotics and any suspected adverse reactions. @tbl-ar summarises these for the platform and for each arm within each domain. So far `r fmt_n(n_ar_forms)` participants have a day `r ar_day` form. The summaries are of the participants that have a form. The table shows how many participants have reached day `r ar_day` and how many forms have been received. A participant without a form is not counted as missing.
+
+The days to the change or cessation of antibiotics, the first antibiotic changed and any other antibiotic specified are summarised for the participants with an antibiotic change or cessation only.
+
+Participants appear in more than one domain column where they have been randomised within several domains.
+
+```{=latex}
+\begin{landscape}
+\setlength{\tabcolsep}{3pt}
+```
+
+```{r}
+#| label: tbl-ar
+#| tbl-cap: !expr 'paste0("Antibiotic changes and suspected adverse reactions at day ", ar_day, " for randomised participants: platform and by domain and arm.")'
+#| tbl-pos: 'H'
+
+hdr_dm <- setNames(rep(2, length(dm_codes)), dm_lab_chr)
+
+kbl(
+  d_ar_tab, format = "latex", booktabs = TRUE, longtable = TRUE, escape = FALSE,
+  align = c("l", rep("r", length(grp_ids))),
+  col.names = c("", grp_nm),
+  linesep = ""
+) |>
+  add_header_above(c(" " = 2, hdr_dm)) |>
+  kable_styling(font_size = 7, latex_options = "repeat_header") |>
+  column_spec(1, width = "7.5cm")
+```
+
+```{=latex}
+\end{landscape}
+```
 
 # Protocol deviations
 
