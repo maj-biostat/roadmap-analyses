@@ -146,10 +146,11 @@ l_cfg$bl <- list(
     dict_var("cmb_obesity", "BAS_Comorb_Obesity",
            "Obesity (BMI >= 30)", "bin", group = "Comorbidities"),
     
+    dict_var("organism_identified", "BAS_Microbio_CausativeOrganismIdentified",
+             "Causative organism identified", "bin"),
+    
     dict_var("asa", "BAS_CQI_ASAClassification", "ASA classification", "cat",
            c("ASA I", "ASA II", "ASA III", "ASA IV", "ASA V", "ASA VI", "Not documented")),
-    dict_var("organism_identified", "BAS_Microbio_CausativeOrganismIdentified",
-           "Causative organism identified", "bin"),
     
     dict_var("bld_crp", "BAS_Bloods_CRP_mgL", 
            "C-reactive protein, mg/L", "num", group = "Blood tests"),
@@ -222,8 +223,10 @@ l_cfg$d100 <- list(
   )
 )
 
-# Primary outcome: treatment success at day 365 after platform randomisation,
-# assessed from `day` - `window` onwards. Treatment success is a composite of
+# Primary outcome: treatment success at day 365 after platform randomisation.
+# The outcome can be assessed within `window` days either side of `day`, so the 
+# window closes on day 395. An outcome that has not been recorded is missing 
+# once the window has closed and is not yet due until then. Treatment success is a composite of
 # the components on the day 365 form, defined here once and used to derive the
 # outcome in d365() and to report each component:
 #   name   - variable name in the derived data (l_po$d_po)
@@ -245,6 +248,12 @@ d365_comp <- function(name, src, label, levels, good, bad, event){
 l_cfg$d365 <- list(
   day = 365, 
   window = 30,
+  # What a component with no response is called: missing once the window has 
+  # closed and not yet due until then.
+  no_response = c(
+    missing = "Not recorded", 
+    not_due = "Not yet due"
+  ),
   components = rbind(
     d365_comp(
       "vital_status", "D365_VitalStatus", "Vital status",
@@ -1004,35 +1013,58 @@ domain_alloc <- function(d_pt, d_pt_dm, l_dm_defn){
   d_alloc
 }
 
-# Primary outcome: treatment success at day 365 after platform randomisation.
-# One row per participant in d_pt (the reporting population).
+# Primary outcome is treatment success at day 365 after platform randomisation.
+# One row per participant in d_pt, which holds the population that we report on.
+#
 #   success - all of the components have the good response: alive, no clinical
 #             or microbiological evidence of infection of the index joint and 
 #             the prosthesis is in place
 #   failure - any of the components has the bad response: dead, evidence of
 #             infection, or the prosthesis is not in place
-# The components are defined in l_cfg$d365$components. A missing or unknown 
-# component only gives a failure if another component is a failure, so success
-# and failure can both be FALSE when the outcome is not known. status then
-# separates:
-#   Outcome missing - the window has opened (day 365 - window) and the outcome
-#                     is not known
-#   Not yet due     - the window has not opened
+#
+# The components are defined in l_cfg$d365$components. 
+#
+# We never assume success. Every component needs to have the good response.
+# So, a participant with a missing or unknown component and no failure is not a 
+# success. A failure on any one component is a failure of the composite whatever
+# the other components are. For example, a participant that has died is a failure
+# and their other components are not applicable. Success and failure indicators 
+# can both be FALSE when the outcome is not known. It is the status that then 
+# separates, by the days since platform randomisation:
+#
+#   Outcome missing - the window has closed (after day 365 + window) and the 
+#                     outcome is not known
+#   Not yet due     - the window has not closed (up to and including day 
+#                     365 + window) and the outcome is not known
 #
 # Returns
 #   d_po:      one row per participant with the component responses (as 
-#              factors), success, failure and status. For participants that 
+#              factors), success, failure and status. Three more fields:
+#                complete_case  - TRUE if the outcome is known, which is a 
+#                                 success or a failure. These are the 
+#                                 participants in a complete case analysis. A
+#                                 failure is included whatever the other 
+#                                 components are.
+#                comps_complete - TRUE if every component has the good or the 
+#                                 bad response (none is missing or unknown)
+#                n_comp_missing - the number of components that are missing 
+#                                 or unknown, for multiple imputation of the 
+#                                 components
+#              The outcome is missing, and to be imputed, if status is 
+#              Outcome missing. For participants that 
 #              died, the date of death and the days from platform randomisation.
 #   d_po_comp: the components in long format, one row per participant and 
 #              component. The response is the response on the day 365 form or,
-#              if there is none, Not recorded (the window has opened) or Not 
-#              yet due.
+#              if there is none, Not recorded (the window has closed) or Not 
+#              yet due (see l_d365_cfg$no_response).
 d365 <- function(
     d_d365, d_pt, l_d365_cfg
 ){
   
+  # all the detail that we need about the the comparisons
   comps <- l_d365_cfg$components
-  win_open <- l_d365_cfg$day - l_d365_cfg$window
+  win_close <- l_d365_cfg$day + l_d365_cfg$window
+  no_resp   <- l_d365_cfg$no_response
   
   # critical fields for primary outcome
   # StudyPtID
@@ -1045,12 +1077,17 @@ d365 <- function(
   d_o <- d_d365[, .(
     StudyPtID   = clean_text(StudyPtID),
     dt_death    = parse_dmy_mon(D365_VitalStatus_DOD),
+    # only record dod unknown if we record that there has been a check done
     dod_unknown = str_to_lower(clean_text(D365_VitalStatus_DOD_Unknown)) %in% "checked"
   )]
   # responses, as factors with the allowed levels
   for(i in seq_len(nrow(comps))){
     v <- comps[i]
-    set(d_o, j = v$name, value = to_factor(
+    
+    # bind in the status of each component of the composite
+    # set in data.table where i = NULL results in all rows. 
+    # value is the col we are adding
+    set(d_o, i = NULL, j = v$name, value = to_factor(
       str_to_title(clean_text(d_d365[[v$src]])), v$levels[[1]], v$name
     ))
   }
@@ -1058,6 +1095,9 @@ d365 <- function(
   stopifnot(!anyDuplicated(d_o$StudyPtID))
   
   # are there any with outcome that are not in ther reporting set?
+  # YES, there is!!
+  # so again, we seem to have some data wanting to creep through even thought 
+  # it is not in the pt list, i.e the data on which we report
   n_out <- d_o[!(StudyPtID %in% d_pt$StudyPtID), .N]
   message("D365: ", nrow(d_o), " rows, ", n_out, " not in the reporting population")
   
@@ -1068,19 +1108,38 @@ d365 <- function(
   )
   
   # the composite: all good for success, any bad for failure
+  # build a matrix with a col for each component and the value for each cell to 
+  # true it is in the good state for the component being considered
   is_good <- vapply(seq_len(nrow(comps)), function(i){
     d_po[[comps$name[i]]] %in% comps$good[i]
   }, logical(nrow(d_po)))
+  # as abouve but for the bad state
   is_bad <- vapply(seq_len(nrow(comps)), function(i){
     d_po[[comps$name[i]]] %in% comps$bad[i]
   }, logical(nrow(d_po)))
+  # success only if all are good
   d_po[, success := rowSums(is_good) == nrow(comps)]
+  # failure if any bad
   d_po[, failure := rowSums(is_bad) > 0]
+  
+  # the outcome is known if it is a success or a failure. This is the complete
+  # case set of pts. 
+  # A success reqs all components to be presetn, but a failure is included 
+  # irrespective of whether the other components are presetn or not.
+  d_po[, complete_case := success | failure]
+  
+  # a component with neither the good nor the bad response is missing or unknown
+  # how many of the components were missing by pt?
+  d_po[, n_comp_missing := nrow(comps) - rowSums(is_good | is_bad)]
+  d_po[, comps_complete := n_comp_missing == 0]
+  
+  # success is never assumed: it needs every component to have the good response
+  stopifnot(!any(d_po$success & !d_po$comps_complete))
   
   d_po[, status := fcase(
     success,                "Success",
     failure,                "Failure",
-    days_rand >= win_open,  "Outcome missing",
+    days_rand > win_close,  "Outcome missing",
     default =               "Not yet due"
   )]
   d_po[, status := factor(
@@ -1091,6 +1150,14 @@ d365 <- function(
   for(j in seq_len(nrow(d_po_smry))){
     message("D365: ", d_po_smry$status[j], ": ", d_po_smry$N[j])
   }
+  # a failure can have components that are missing; an outcome that is missing
+  # always does (and none of its components is a failure)
+  message(
+    "D365: ", d_po[status == "Failure" & !comps_complete, .N], " of the ", 
+    d_po[status == "Failure", .N], " failures have a component that is missing ", 
+    "or unknown, ", d_po[status == "Failure" & !comps_complete & vital_status %in% "Dead", .N],
+    " of whom have died"
+  )
   
   # deaths: days from platform randomisation to the date of death
   d_po[, days_to_death := as.integer(dt_death - dt_rand)]
@@ -1100,6 +1167,7 @@ d365 <- function(
     "D365: ", n_dead, " deaths, ", d_po[vital_status %in% "Dead" & !is.na(days_to_death), .N],
     " with a date of death"
   )
+  # why can we get deaths happening outside what is logically possible>?>??
   n_odd <- d_po[!is.na(days_to_death) & (days_to_death < 0 | days_to_death > days_rand), .N]
   if(n_odd){
     message("D365: ", n_odd, " dates of death before randomisation or after the extract")
@@ -1107,7 +1175,7 @@ d365 <- function(
   message("\n")
   
   # components in long format. A component with no response is Not recorded 
-  # once the window has opened and Not yet due before that.
+  # once the window has closed and Not yet due before that.
   d_po_comp <- rbindlist(lapply(seq_len(nrow(comps)), function(i){
     v <- comps[i]
     resp <- d_po[[v$name]]
@@ -1116,11 +1184,11 @@ d365 <- function(
       component = v$name,
       response  = factor(
         fcase(
-          !is.na(resp),          as.character(resp),
-          d_po$days_rand >= win_open, "Not recorded",
-          default =              "Not yet due"
+          !is.na(resp),                as.character(resp),
+          d_po$days_rand > win_close,  no_resp[["missing"]],
+          default =                    no_resp[["not_due"]]
         ),
-        levels = c(v$levels[[1]], "Not recorded", "Not yet due")
+        levels = c(v$levels[[1]], unname(no_resp))
       )
     )
   }))
@@ -1132,8 +1200,8 @@ d365 <- function(
   )
 }
 
-# Day 100 form: changes to antibiotics and suspected adverse reactions.
-# One row per participant in d_pt (the reporting population). A participant
+# Day 100 form giving changes to antibiotics and suspected adverse reactions.
+# One row per participant in d_pt (reporting population). A participant
 # without a day 100 form has has_d100 = FALSE and the values NA, so the 
 # summaries should be of those with a form. The variables are cleaned as set 
 # out in the data dictionary l_cfg$d100$vars. The date of the change in 
@@ -1204,6 +1272,7 @@ baseline <- function(d_bl, id_pop, l_bl_cfg){
   vars <- l_bl_cfg$vars
   stopifnot("organism_identified" %in% vars$name)
   
+  # wrapper around clean funcs
   d_clean <- clean_vars(d_bl, vars)
   d_clean[, `:=`(
     has_bl      = TRUE,
@@ -1217,6 +1286,8 @@ baseline <- function(d_bl, id_pop, l_bl_cfg){
   )
   d_bl_out[is.na(has_bl), has_bl := FALSE]
   
+  
+  # micro data done separately 
   d_micro <- baseline_micro(d_bl)
   baseline_micro_check(d_bl_out, d_micro)
   
@@ -1226,12 +1297,21 @@ baseline <- function(d_bl, id_pop, l_bl_cfg){
   )
 }
 
-# Causative organisms are held wide in the baseline extract, with up to three
-# organisms per participant that each have the same set of fields. This turns 
-# them into one row per participant and organism.
-baseline_micro <- function(d_bl){
+# Causative organisms are held wide in the baseline extract. In the dummy data
+# there are up to three organisms per participant that each have the same set 
+# of fields but unclear whether three is the upper limit. 
+# Here we assume an upper limit of 9 and convert to one row per participant 
+# and organism.
+baseline_micro <- function(
+    d_bl
+    ){
   
-  cols <- grep("^BAS_Microbio_Org0[1-3]", names(d_bl), value = TRUE)
+  cols <- grep("^BAS_Microbio_Org0.", names(d_bl), value = TRUE)
+  
+  n_org <- length(unique(substr(cols, 14, 18)))
+  stopifnot(n_org < 10)
+  message("BLMicro: pt data have up to ", n_org, " organisms identified")
+  
   d_m <- d_bl[, c("StudyPtID", cols), with = FALSE]
   d_m[, (cols) := lapply(.SD, as.character), .SDcols = cols]
   
@@ -1239,13 +1319,13 @@ baseline_micro <- function(d_bl){
   d_org <- melt(
     d_m, id.vars = "StudyPtID",
     measure.vars = patterns(
-      organism      = "^BAS_Microbio_Org0[1-3]OrganismName$",
-      specify       = "^BAS_Microbio_Org0[1-3]OrganismsSpecify$",
-      specify_other = "^BAS_Microbio_Org0[1-3]OrganismsSpecifyOther$",
-      pre_syn       = "^BAS_Microbio_Org0[1-3]Detected_PreOpSynovial$",
-      intra_syn     = "^BAS_Microbio_Org0[1-3]Detected_IntraOpSynovial$",
-      intra_tis     = "^BAS_Microbio_Org0[1-3]Detected_IntraOpTissue$",
-      blood         = "^BAS_Microbio_Org0[1-3]Detected_BloodCultures$"
+      organism      = "^BAS_Microbio_Org0[1-9]OrganismName$",
+      specify       = "^BAS_Microbio_Org0[1-9]OrganismsSpecify$",
+      specify_other = "^BAS_Microbio_Org0[1-9]OrganismsSpecifyOther$",
+      pre_syn       = "^BAS_Microbio_Org0[1-9]Detected_PreOpSynovial$",
+      intra_syn     = "^BAS_Microbio_Org0[1-9]Detected_IntraOpSynovial$",
+      intra_tis     = "^BAS_Microbio_Org0[1-9]Detected_IntraOpTissue$",
+      blood         = "^BAS_Microbio_Org0[1-9]Detected_BloodCultures$"
     ),
     variable.name = "slot"
   )
@@ -1258,7 +1338,8 @@ baseline_micro <- function(d_bl){
     specify       = clean_text(specify, tokens_to_na = na_tokens),
     specify_other = clean_text(specify_other, tokens_to_na = na_tokens)
   )]
-  # where the organism was detected, as TRUE/FALSE
+  # where the organism was detected (options are PreOpSynovial, IntraOpSynovial,
+  # IntraOpTissue or BloodCultures) set to as TRUE/FALSE
   detected <- c("pre_syn", "intra_syn", "intra_tis", "blood")
   d_org[, (detected) := lapply(.SD, yn), .SDcols = detected]
   
@@ -1292,12 +1373,12 @@ baseline_micro_check <- function(d_bl, d_micro){
 
 # Protocol deviations.
 # One row per recorded deviation; a participant can have more than one.
-# - Test sites and participants that are not in the randomised set (id_rand,
+# - Test sites and participants that are not in randomised set (id_rand,
 #   from the screening step) are removed and listed in d_excl.
 # - Dates are parsed and the Yes/No fields are recoded to logical.
-# - Free text details/action taken, the user audit fields and the names of the
-#   people completing the form are not carried through to the derived data.
-# Deviations are recorded against the participant and the form has no domain
+# - Free text details/action taken, the user audit fields and the names of 
+#   people completing form are not carried through to the derived data.
+# Deviations are recorded against the participant and form has no domain
 # field, so there is no domain level attribution here.
 deviations <- function(
     d_pd, id_pop,
@@ -1312,9 +1393,11 @@ deviations <- function(
   stopifnot(!anyNA(d_pd$StudyPtID))
   stopifnot(!anyNA(d_pd$PD_ID), !anyDuplicated(d_pd$PD_ID))
   
+  # site
   d_pd[, id_prefix := sub("-.*$", "", StudyPtID)]
   
   # removals: test sites, then anyone that is not a randomised participant
+  # no EL_SiteCode in PD data
   d_pd[, reason_excl := fcase(
     id_prefix %in% test_codes,   "test site",
     !(StudyPtID %in% id_pop),    "not in reporting population",
