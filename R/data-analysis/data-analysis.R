@@ -125,6 +125,9 @@ l_cfg$bl <- list(
     dict_var("prosthesis_type", "BAS_DIP_ProthesisType", "Prosthesis type", "cat", 
            c("Primary", "Revision")),
     
+    dict_var("organism_identified", "BAS_Microbio_CausativeOrganismIdentified",
+             "Causative organism identified", "bin", group = "Microbiology"),
+    
     dict_var("cmb_diabetes", "BAS_Comorb_DiabetesMellitus", 
            "Diabetes mellitus", "bin", group = "Comorbidities"),
     dict_var("cmb_renal", "BAS_Comorb_ChronicRenalDisease",
@@ -146,11 +149,9 @@ l_cfg$bl <- list(
     dict_var("cmb_obesity", "BAS_Comorb_Obesity",
            "Obesity (BMI >= 30)", "bin", group = "Comorbidities"),
     
-    dict_var("organism_identified", "BAS_Microbio_CausativeOrganismIdentified",
-             "Causative organism identified", "bin"),
-    
-    dict_var("asa", "BAS_CQI_ASAClassification", "ASA classification", "cat",
-           c("ASA I", "ASA II", "ASA III", "ASA IV", "ASA V", "ASA VI", "Not documented")),
+    dict_var("asa", "BAS_CQI_ASAClassification", 
+             "ASA classification", "cat",
+             c("ASA I", "ASA II", "ASA III", "ASA IV", "ASA V", "ASA VI", "Not documented")),
     
     dict_var("bld_crp", "BAS_Bloods_CRP_mgL", 
            "C-reactive protein, mg/L", "num", group = "Blood tests"),
@@ -168,9 +169,7 @@ l_cfg$bl <- list(
     dict_var("oks", "BAS_OKS_Score",
            "Oxford Knee Score (0-48)", "num", group = "Patient reported outcomes"),
     dict_var("eq5d_score", "BAS_EQ5D5L_Score",
-           "EQ-5D-5L score", "num", group = "Patient reported outcomes"),
-    dict_var("eq5d_vas", "BAS_EQ5D5L_HealthToday",
-           "EQ-5D-5L health today (0-100)", "num", group = "Patient reported outcomes")
+           "EQ-5D-5L score", "num", group = "Patient reported outcomes")
   )
 )
 

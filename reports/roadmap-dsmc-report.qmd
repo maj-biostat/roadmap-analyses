@@ -112,7 +112,7 @@ dt_cut <- l_cfg$version$dt_extract
 # primary outcome timing, set in the extract script (l_cfg$d365)
 po_day  <- l_cfg$d365$day
 po_win  <- l_cfg$d365$window
-po_open <- po_day - po_win   # the outcome window opens
+po_close <- po_day + po_win   # the outcome window closes
 
 # plot defaults
 cols_arm <- c("#0072B2", "#E69F00")   # arm 1, arm 2 within a domain (print safe)
@@ -213,11 +213,11 @@ if (is_dummy) {
 }
 ```
 
-This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This report describes enrolment into the platform and domains, the current length of follow-up, baseline characteristics, the primary outcome and its components, and the antibiotic changes and suspected adverse reactions recorded at day `r l_cfg$d100$day`. Only descriptive summaries only are provided.
+This report has been prepared for the Data and Safety Monitoring Committee (DSMC) of the ROADMAP platform trial. ROADMAP is a randomised platform trial in prosthetic joint infection (PJI). Participants can be randomised within one or more treatment domains. This report describes enrolment into the platform and domains, the current length of follow-up, baseline characteristics, the primary outcome and its components, and the antibiotic changes and suspected adverse reactions recorded at day `r l_cfg$d100$day`. Only descriptive summaries are provided.
 
-**Population.** Randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment has the outcome *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded due to being invalid or test records, or whose assessment is pending are not analysed further but are shown in the participant flow diagram (@fig-consort).
+**Population.** Randomised participants are included. A participant is counted as randomised to the platform when their platform eligibility assessment is set to *Randomised*; test site data and enrolments subsequently identified as invalid are excluded. Participants who were not included, excluded due to being invalid or test records, or whose assessment is pending are not analysed further but are shown in the participant flow diagram (@fig-consort).
 
-**Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course. Specifically, participants receiving one-stage revision may enter into the antibiotic duration (AB Dur A) domain and participants receiving two-stage revision may enter into the extended prophylaxis domain (AB Dur B). Participants may be randomised within valid combinations of domains. Both the platform level and the domain level views are presented. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point.
+**Domains.** The platform has `r length(dm_codes)` domains (@tbl-domains). The domains are not independent. Whether a participant is eligible for a domain depends on their clinical course. Specifically, participants receiving one-stage revision may enter into the antibiotic duration (AB Dur A) domain and participants receiving two-stage revision may enter into the extended prophylaxis domain (AB Dur B). Participants may enter into any of the valid combinations of domains. Randomisation is performed at the platform level; the allocation for a domain is revealed only once entry into that domain has been confirmed and consented, and participants are counted within a domain from that point. Both the platform level and the domain level summaries are presented here.
 
 ```{r}
 #| label: tbl-domains
@@ -248,7 +248,7 @@ d_alloc <- l_pt$d_pt_alloc
 cs <- list(
   screened  = l_dat$n_screened,
   registry  = l_dat$n_registry,
-  not_elig  = l_dat$n_not_eligible,
+  not_elig  = l_dat$n_not_eligible,  # not elig for either reg or plt
   pending   = l_dat$n_pending,
   platform  = l_dat$n_randomised,   # randomised to the platform
   pop       = n_rand,               # in this report (in the participant list)
@@ -273,7 +273,7 @@ d_cs_dm <- merge(
   d_alloc[, .(n_alloc = .N, n_entered = sum(revealed)), by = dm],
   by = "dm", all.x = TRUE
 )
-for (cc in c("n_alloc", "n_entered")) set(d_cs_dm, which(is.na(d_cs_dm[[cc]])), cc, 0L)
+for (cc in c("n_alloc", "n_entered")) { set(d_cs_dm, which(is.na(d_cs_dm[[cc]])), cc, 0L) }
 d_cs_dm <- d_cs_dm[match(dm_codes, dm)]
 stopifnot(all(d_cs_dm$n_entered == d_dm_n[, .(n = sum(N)), keyby = dm][d_cs_dm$dm, n]))
 ```
@@ -288,6 +288,7 @@ fl_size <- 7.5 / .pt     # text size, 7.5pt
 fl_lh   <- 1.5           # height of a line of text
 fl_pad  <- 2.6           # space around the text in a box
 
+# data.table describing box with title, body and spec for position, width and height and fill
 flow_box <- function(id, x, y, w, title, body = character(), fill = "white") {
   n_t <- length(title)
   n_b <- length(body)
@@ -303,6 +304,7 @@ flow_box <- function(id, x, y, w, title, body = character(), fill = "white") {
   )
 }
 
+# 
 flow_seg <- function(x, y, xend, yend, arrow = TRUE) {
   data.table(x = x, y = y, xend = xend, yend = yend, arrow = arrow)
 }
@@ -336,7 +338,7 @@ flow_draw <- function(d_box, d_seg) {
 
 @fig-consort shows the flow of participants from screening to randomisation to the platform, and from the platform to the domains and the arms within each domain. Participants can be allocated to more than one domain, so the numbers for the domains are not additive.
 
-Entered into the domain essentially means that a participant appears in the domain data but does not necessarily have an allocation whereas allocation implies that a treatment arm allocation was present in the data.
+Entered into the domain essentially means that a participant appears in the domain data but does not necessarily appear in the domain data whereas allocation implies that a treatment arm allocation was present in the data, which implies that the participant was revealed to treatment.
 
 ```{r}
 #| label: fig-consort
@@ -344,22 +346,24 @@ Entered into the domain essentially means that a participant appears in the doma
 #| fig-width: 6.5
 #| fig-height: 7.6
 
-# ---- layout ----------------------------------------------------------------
+# layout
 # main column of boxes from top to bottom. The box for those not in the
 # participant list is only needed if some randomised participants are missing.
 spine   <- c("screened", "platform", if (cs$not_in_list > 0) "pop",
              "allocated", "entered", "domain", "arm")
 y_lv    <- setNames(seq(94, 8, length.out = length(spine)), spine)
+# describes whether we are takling about the platform or 
 id_pop  <- if (cs$not_in_list > 0) "pop" else "platform"
 
 x0 <- 50;  w0 <- 38            # main column
 x_side <- 85;  w_side <- 27    # side boxes
 k    <- length(dm_codes)
 x_dm <- (seq_len(k) - 0.5) * 100 / k
+# whole page (percentage ) divided by domains
 w_dm <- 100 / k - 1
 n_t  <- function(n) paste0("n = ", fmt_n(n))
 
-# ---- boxes -----------------------------------------------------------------
+# boxes - each box in the figure are described
 l_box <- list(
   flow_box("screened", x0, y_lv[["screened"]], w0, "Screened", n_t(cs$screened), "grey93"),
   flow_box("platform", x0, y_lv[["platform"]], w0, "Randomised to the platform", n_t(cs$platform), "grey93"),
@@ -372,12 +376,12 @@ l_box <- list(
            c("Entered one or more domains", "(allocation revealed)"), n_t(cs$entered), "grey93")
 )
 
-# domains, and the arms within each domain
+# for each domain, plus the arms within each domain
 for (i in seq_len(k)) {
   l_box <- c(l_box, list(flow_box(
     paste0("dm", i), x_dm[i], y_lv[["domain"]], w_dm, as.character(d_cs_dm$dm_lab[i]),
     c(paste("Allocated:", fmt_n(d_cs_dm$n_alloc[i])),
-      paste("Entered:", fmt_n(d_cs_dm$n_entered[i]))),
+      paste("Revealed:", fmt_n(d_cs_dm$n_entered[i]))),
     "#DCEAF5"
   )))
   d_a <- d_dm_n[dm == d_cs_dm$dm[i]][order(arm_pos)]
@@ -392,28 +396,33 @@ for (i in seq_len(k)) {
   }
 }
 
-# side boxes, between the two boxes that they sit between
-l_side <- Filter(Negate(is.null), list(
-  list(from = "screened", to = "platform",
-       title = paste0("Not randomised (n = ", fmt_n(cs$not_rand), ")"),
-       body = c(paste("Registry:", fmt_n(cs$registry)),
-                paste("Not eligible:", fmt_n(cs$not_elig)),
-                paste("Assessment pending:", fmt_n(cs$pending)))),
-  if (cs$not_in_list > 0) {
-    list(from = "platform", to = "pop",
-         title = "Not in the participant list", body = n_t(cs$not_in_list))
-  },
-  list(from = id_pop, to = "allocated",
-       title = "Not allocated to a domain", body = n_t(cs$no_alloc)),
-  list(from = "allocated", to = "entered",
-       title = "Allocation not revealed", body = n_t(cs$not_entered))
-))
+# now side boxes, positioned between the two boxes that they sit between
+side_box <- function(from, to, title, body) {
+  list(from = from, to = to, title = title, body = body)
+}
+
+l_side <- list(
+  side_box("screened", "platform",
+           title = paste0("Not randomised (n = ", fmt_n(cs$not_rand), ")"),
+           body  = c(paste("Registry:", fmt_n(cs$registry)),
+                     paste("Not eligible for reg/plt:", fmt_n(cs$not_elig)),
+                     paste("Assessment pending:", fmt_n(cs$pending)))),
+  side_box(id_pop, "allocated", "Not allocated to a domain", n_t(cs$no_alloc)),
+  side_box("allocated", "entered", "Allocation not revealed", n_t(cs$not_entered))
+)
+
+# only needed if some randomised participants are not in the participant list
+if (cs$not_in_list > 0) {
+  l_side <- c(l_side, list(
+    side_box("platform", "pop", "Not in the participant list", n_t(cs$not_in_list))
+  ))
+}
 
 d_box <- rbindlist(l_box)
 top_of    <- function(bid) d_box[id == bid, y + h / 2]
 bottom_of <- function(bid) d_box[id == bid, y - h / 2]
 
-# ---- connectors ------------------------------------------------------------
+# connections between boxes
 l_seg <- list()
 main  <- spine[spine %in% c("screened", "platform", "pop", "allocated", "entered")]
 
@@ -451,7 +460,7 @@ flow_draw(d_box, rbindlist(l_seg))
 
 # Platform enrolment
 
-As at the data extract, `r fmt_n(n_rand)` participants had been randomised to the platform from `r n_sites` recruiting sites. The first participant was randomised on `r fmt_date(dt_first)` and the most recent on `r fmt_date(dt_last)`. Randomisation over time is shown in @fig-enrol.
+At the time of the data extract, `r fmt_n(n_rand)` participants had been randomised to the platform from `r n_sites` recruiting sites. The first participant was randomised on `r fmt_date(dt_first)` and the most recent on `r fmt_date(dt_last)`. Randomisation over time is shown in @fig-enrol.
 
 ```{r}
 #| label: fig-enrol
@@ -528,7 +537,7 @@ ggplot(d_combo, aes(N, combo)) +
 
 ## Randomisation by study site
 
-Randomisations by study site are shown in @tbl-sites. Participants can be randomised within more than one domain, so the domain columns do not sum to the platform total.
+Randomisations by study site are shown in @tbl-sites. Participants can be randomised within more than one domain, so the domain columns are unlikely to sum to the platform total.
 
 ```{r}
 #| label: tbl-sites
@@ -621,7 +630,7 @@ fig_note <- paste(
 )
 ```
 
-The domain level view is based on the domain eligibility data. @tbl-dm-n gives the number randomised to each arm and @fig-dm-overview compares the domains. The following sections show each domain in turn.
+The domain level view is based on the domain eligibility data. @tbl-dm-n gives the number randomised to each arm and @fig-dm-overview compares the domains. The following sections show the progression into each domain by arm.
 
 ```{r}
 #| label: tbl-dm-n
@@ -973,7 +982,7 @@ d_mic_tab  <- data.table(Characteristic = d_mic_cols[[1]]$label)
 for (i in seq_along(d_mic_cols)) set(d_mic_tab, j = paste0("g", i), value = d_mic_cols[[i]]$val)
 ```
 
-Baseline microbiology is summarised for all randomised participants (@tbl-micro-site) and for each arm within each domain (@tbl-micro). A participant has a causative organism identified when this is recorded as Yes; up to three organisms were recorded for a participant. Organism counts are numbers of participants, so a participant with more than one organism is counted against each and the percentages can sum to more than 100%. Percentages for the number of organisms and for each organism are of participants with a causative organism identified. *Staphylococcus aureus* (any) in @tbl-micro-site combines the methicillin resistant, methicillin susceptible and penicillin susceptible categories. Species recorded in the specify fields are not tabulated separately.
+Baseline microbiology is summarised for all randomised participants (@tbl-micro-site) and for each arm within each domain (@tbl-micro). Organism counts are numbers of participants, so a participant with more than one organism is counted against each and the percentages can sum to more than 100% (e.g. Staphylococcus epidermidis). Percentages for the number of organisms and for each organism are of participants with a causative organism identified. *Staphylococcus aureus* (any) in @tbl-micro-site combines the methicillin resistant, methicillin susceptible and penicillin susceptible categories. Species recorded in the specify fields are not tabulated separately.
 
 @tbl-micro-site shows where each organism was detected, across all randomised participants. Each row counts organism records, so a participant with several organisms contributes several records, and a record can be positive in more than one type of sample.
 
@@ -1045,7 +1054,7 @@ kbl(
 
 # Primary outcome
 
-The primary outcome is treatment success at day `r po_day` (window of `r po_win` days either side) after platform randomisation. A participant is a success if they are alive, with no clinical and no microbiological evidence of infection of the index joint, and the prosthesis is in place. A participant is a failure if they have died, have clinical or microbiological evidence of infection, or the prosthesis is not in place. Where the outcome is not known to be a failure and any component is missing or unknown, the outcome would be classed as *missing* once the participant has reached day `r po_open` and as *not yet due* for any time before that. @tbl-po and @fig-po summarise the outcome for the platform and by arm within each domain.
+The primary outcome is treatment success at day `r po_day` (window of `r po_win` days either side) after platform randomisation. A participant is a success if they are alive, with no clinical and no microbiological evidence of infection of the index joint, and the prosthesis is in place. Success is not assumed where a component is missing or unknown. A participant is a failure if they have died, have clinical or microbiological evidence of infection, or the prosthesis is not in place, whatever the other components are. Where the outcome is not known to be a failure and any component is missing or unknown, the outcome is classed as *missing* once the participant has passed day `r po_close`, the end of the outcome window, and as *not yet due* before that. @tbl-po and @fig-po summarise the outcome for the platform and by arm within each domain.
 
 ```{r}
 #| label: po-prep
@@ -1054,6 +1063,14 @@ The primary outcome is treatment success at day `r po_day` (window of `r po_win`
 # randomised participant with its status (success, failure, outcome missing or
 # not yet due). Join l_pt$d_pt_dm to see it by domain and arm.
 d_po <- l_po$d_po
+
+# failures can have components that are missing or unknown, for example when a
+# participant has died. These are still failures. An outcome that is missing
+# always has a component that is missing or unknown.
+d_po_fail   <- d_po[status == "Failure"]
+n_fail      <- nrow(d_po_fail)
+n_fail_inc  <- d_po_fail[comps_complete == FALSE, .N]
+n_fail_dead <- d_po_fail[comps_complete == FALSE & vital_status %in% "Dead", .N]
 
 po_row <- function(ids) {
   s  <- d_po[StudyPtID %in% ids, status]
@@ -1084,12 +1101,19 @@ d_po_tab <- rbindlist(c(
 d_po_show <- copy(d_po_tab)
 num_cols  <- c("n", "succ", "fail", "miss", "nyd")
 d_po_show[, (num_cols) := lapply(.SD, fmt_n), .SDcols = num_cols]
+# the header has line breaks, so escape the cells here rather than in kbl
+d_po_show[, `:=`(
+  Domain = tex_esc(Domain), Arm = tex_esc(Arm), pct = gsub("%", "\\%", pct, fixed = TRUE)
+)]
 
 kbl(
-  d_po_show, format = "latex", booktabs = TRUE,
+  d_po_show, format = "latex", booktabs = TRUE, escape = FALSE,
   align = "llrrrrrr",
-  col.names = c("Domain", "Arm", "Randomised", "Success", "Failure",
-                "Outcome missing", "Not yet due", "Success among known, %")
+  col.names = linebreak(
+    c("Domain", "Arm", "Randomised", "Success", "Failure", "Outcome\nmissing",
+      "Not yet\ndue", "Success among\nknown, \\%"),
+    align = "c"
+  )
 ) |>
   kable_styling(font_size = 8) |>
   collapse_rows(columns = 1, latex_hline = "major", valign = "top") |>
@@ -1097,8 +1121,13 @@ kbl(
     general = paste(
       "Randomised = Success + Failure + Outcome missing + Not yet due.",
       "Known outcomes are Success plus Failure; the percentage is of known outcomes.",
-      paste0("Outcome missing: day ", po_open, " reached and outcome not known."),
-      paste0("Not yet due: day ", po_open, " not reached and outcome not known.")
+      paste0("Outcome missing: day ", po_close, " has passed and the outcome is not known."),
+      paste0("Not yet due: day ", po_close, " has not passed and the outcome is not known."),
+      paste0(
+        "Success is not assumed where a component is missing or unknown. ",
+        "Of the ", n_fail, " failures, ", n_fail_inc, " had a component that was missing or unknown",
+        if (n_fail_inc > 0) paste0(" (", n_fail_dead, " of these had died)"), "."
+      )
     ),
     general_title = "Note: ", threeparttable = TRUE, escape = TRUE
   )
@@ -1108,7 +1137,7 @@ kbl(
 #| label: fig-po
 #| fig-cap: "Primary outcome status of randomised participants by arm within each domain (proportion of participants randomised to the arm)."
 #| fig-width: 6.5
-#| fig-height: 4.2
+#| fig-height: 3.7
 
 d_fig <- rbindlist(lapply(seq_len(nrow(d_arm)), function(i) {
   ids <- d_dm[dm == d_arm$dm[i] & arm == d_arm$arm[i], StudyPtID]
@@ -1138,16 +1167,17 @@ ggplot(d_fig, aes(N, arm_lab, fill = status)) +
 
 Treatment success is a composite of four components recorded at day `r po_day`: vital status, clinical evidence of infection of the index joint, microbiological evidence of infection of the index joint and whether the prosthesis is in place. A participant is a treatment success if they are alive, with no clinical and no microbiological evidence of infection, and the prosthesis is in place. A participant is a failure if any one component has the opposite response. Each component is summarised in turn for the platform and by arm within each domain.
 
-For each component the tables show the number of participants with each response. A participant without a response is counted as Not recorded once day `r po_open` has been reached, the start of the outcome window, and as Not yet due before that. Unknown is a recorded response of unknown. The final column is the percentage of known responses, which are those other than unknown, that have the event described in the note to the table.
+For each component the tables show the number of participants with each response. A participant without a response is counted as Not recorded once day `r po_close` has passed, the end of the outcome window, and as Not yet due before that. Unknown is a recorded response of unknown. The final column is the percentage of known responses, which are those other than unknown, that have the event described in the note to the table.
 
 ```{r}
 #| label: comp-prep
 
 # The components are defined in l_cfg$d365$components and made in d365() in the
 # extract script. l_po$d_po_comp has one row per participant and component, with
-# the response or Not recorded / Not yet due.
+# the response or, if there is none, Not recorded or Not yet due.
 d_po_comp <- l_po$d_po_comp
 d_comps   <- copy(l_cfg$d365$components)
+no_resp   <- unname(l_cfg$d365$no_response)   # Not recorded, Not yet due
 
 comp_cap <- function(what) paste0(what, " at day ", po_day, ": platform and by domain and arm.")
 
@@ -1155,7 +1185,7 @@ comp_cap <- function(what) paste0(what, " at day ", po_day, ": platform and by d
 comp_table <- function(comp) {
   v   <- d_comps[name == comp]
   d   <- d_po_comp[component == comp]
-  lev <- c(v$levels[[1]], "Not recorded", "Not yet due")   # all of the responses
+  lev <- c(v$levels[[1]], no_resp)   # all of the responses
 
   d_tab <- rbindlist(lapply(seq_len(nrow(d_grp)), function(i) {
     r <- factor(d[StudyPtID %in% d_grp$ids[[i]], response], levels = lev)
@@ -1183,7 +1213,8 @@ comp_table <- function(comp) {
     footnote(
       general = paste0(
         "Event: ", v$event, ". Known responses are ", v$good, " and ", v$bad, ". ",
-        "Randomised is the sum of the responses, Not recorded and Not yet due."
+        "Randomised is the sum of the responses, ",
+        paste(no_resp[-length(no_resp)], collapse = ", "), " and ", no_resp[length(no_resp)], "."
       ),
       general_title = "Note: ", threeparttable = TRUE
     )
@@ -1193,7 +1224,7 @@ comp_table <- function(comp) {
 comp_fig <- function(comp) {
   v   <- d_comps[name == comp]
   d   <- d_po_comp[component == comp]
-  lev <- c(v$levels[[1]], "Not recorded", "Not yet due")   # all of the responses
+  lev <- c(v$levels[[1]], no_resp)   # all of the responses
 
   d_f <- rbindlist(lapply(seq_len(nrow(d_grp))[-1], function(i) {
     x <- d[StudyPtID %in% d_grp$ids[[i]], .N, by = response]

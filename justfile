@@ -1,6 +1,8 @@
 
+data:
+  Rscript --vanilla ./R/data-analysis/data-analysis.R
 
-render_report rep:
+report rep:
   quarto render {{rep}} --to pdf
   
   
