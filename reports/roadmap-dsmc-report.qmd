@@ -336,6 +336,8 @@ flow_draw <- function(d_box, d_seg) {
 
 @fig-consort shows the flow of participants from screening to randomisation to the platform, and from the platform to the domains and the arms within each domain. Participants can be allocated to more than one domain, so the numbers for the domains are not additive.
 
+Entered into the domain essentially means that a participant appears in the domain data but does not necessarily have an allocation whereas allocation implies that a treatment arm allocation was present in the data.
+
 ```{r}
 #| label: fig-consort
 #| fig-cap: "Flow of participants from screening to the platform, the domains and the arms within each domain. Allocated: allocated to the domain at platform randomisation. Entered: entry into the domain confirmed and consented, so the allocation is revealed. The numbers for the arms are participants that have entered the domain."

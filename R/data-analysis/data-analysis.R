@@ -88,82 +88,188 @@ l_cfg$dm_defn <- list(
   )
 )
 
-# Baseline data dictionary: one row per baseline variable that is reported, in
-# the order it is reported. It drives the cleaning in baseline() and the layout
-# of the baseline table in the report, so a variable is added in one place.
-#   name   - variable name in the derived data (l_bl$d_bl)
-#   src    - column in the raw baseline extract
+# Data dictionaries: one row per variable that is reported, in the order it is
+# reported. A dictionary drives the cleaning of the variables (clean_vars()) and
+# the layout of the table of them in the report, so a variable is added in one
+# place. There is a dictionary for the baseline data and one for day 100.
+#   name   - variable name in the derived data
+#   src    - column in the raw extract
 #   label  - plain text label used in the report
-#   type   - num (a number), cat (one of `levels`) or bin (Yes/No)
+#   type   - one of
+#              num  - a number
+#              cat  - one of `levels`. If `levels` is NULL they are the values 
+#                     that are found in the data, most common first
+#              bin  - Yes/No. A checkbox (Checked/Unchecked) is read as Yes/No
+#              days - a date, as the days from platform randomisation
+#              text - free text, which is not summarised: only whether there is any
 #   levels - the allowed values of a cat variable; anything else is set to NA
 #   group  - optional heading the variable is reported under
-bl_var <- function(name, src, label, type, levels = NULL, group = NA_character_){
+#   when   - optional name of a bin variable. The variable is only reported for
+#            the participants that have Yes for it.
+dict_var <- function(
+    name, src, label, type, levels = NULL, group = NA_character_, 
+    when = NA_character_
+){
   data.table(
     name = name, src = src, label = label, type = type, 
-    levels = list(levels), group = group
+    levels = list(levels), group = group, when = when
   )
 }
 
 l_cfg$bl <- list(
   vars = rbind(
-    bl_var("age", "BAS_Dem_Age", "Age, years", "num"),
-    bl_var("sex", "BAS_Dem_Sex", "Sex", "cat", c("Female", "Male")),
-    bl_var("joint", "BAS_DIP_IJSite", "Index joint", "cat", c("Hip", "Knee")),
-    bl_var("side", "BAS_DIP_IJSide", "Index joint side", "cat", c("Left", "Right")),
-    bl_var("prosthesis_type", "BAS_DIP_ProthesisType", "Prosthesis type", "cat", 
+    dict_var("age", "BAS_Dem_Age", "Age, years", "num"),
+    dict_var("sex", "BAS_Dem_Sex", "Sex", "cat", c("Female", "Male")),
+    dict_var("joint", "BAS_DIP_IJSite", "Index joint", "cat", c("Hip", "Knee")),
+    dict_var("side", "BAS_DIP_IJSide", "Index joint side", "cat", c("Left", "Right")),
+    dict_var("prosthesis_type", "BAS_DIP_ProthesisType", "Prosthesis type", "cat", 
            c("Primary", "Revision")),
     
-    bl_var("cmb_diabetes", "BAS_Comorb_DiabetesMellitus", 
+    dict_var("cmb_diabetes", "BAS_Comorb_DiabetesMellitus", 
            "Diabetes mellitus", "bin", group = "Comorbidities"),
-    bl_var("cmb_renal", "BAS_Comorb_ChronicRenalDisease",
-           "Chronic renal disease (eGFR < 50, not on dialysis)", "bin", group = "Comorbidities"),
-    bl_var("cmb_esrf", "BAS_Comorb_EndStageRenalFailure",
-           "End stage renal failure (haemodialysis or CAPD)", "bin", group = "Comorbidities"),
-    bl_var("cmb_malignancy", "BAS_Comorb_MalignancyPast12M",
+    dict_var("cmb_renal", "BAS_Comorb_ChronicRenalDisease",
+           "Chronic renal disease", "bin", group = "Comorbidities"),
+    dict_var("cmb_esrf", "BAS_Comorb_EndStageRenalFailure",
+           "End stage renal failure", "bin", group = "Comorbidities"),
+    dict_var("cmb_malignancy", "BAS_Comorb_MalignancyPast12M",
            "Malignancy in past 12 months", "bin", group = "Comorbidities"),
-    bl_var("cmb_cirrhosis", "BAS_Comorb_Cirrhosis",
+    dict_var("cmb_cirrhosis", "BAS_Comorb_Cirrhosis",
            "Cirrhosis", "bin", group = "Comorbidities"),
-    bl_var("cmb_ra", "BAS_Comorb_RheumatoidArthritis",
+    dict_var("cmb_ra", "BAS_Comorb_RheumatoidArthritis",
            "Rheumatoid arthritis", "bin", group = "Comorbidities"),
-    bl_var("cmb_steroid", "BAS_Comorb_CorticosteroidPast6M",
+    dict_var("cmb_steroid", "BAS_Comorb_CorticosteroidPast6M",
            "Systemic corticosteroid use in past 6 months", "bin", group = "Comorbidities"),
-    bl_var("cmb_immunosupp", "BAS_Comorb_IatrogenicImmunoSupp",
+    dict_var("cmb_immunosupp", "BAS_Comorb_IatrogenicImmunoSupp",
            "Iatrogenic immunosuppression", "bin", group = "Comorbidities"),
-    bl_var("cmb_cardiac", "BAS_Comorb_Cardiac",
+    dict_var("cmb_cardiac", "BAS_Comorb_Cardiac",
            "Congestive cardiac failure", "bin", group = "Comorbidities"),
-    bl_var("cmb_obesity", "BAS_Comorb_Obesity",
+    dict_var("cmb_obesity", "BAS_Comorb_Obesity",
            "Obesity (BMI >= 30)", "bin", group = "Comorbidities"),
     
-    bl_var("asa", "BAS_CQI_ASAClassification", "ASA classification", "cat",
+    dict_var("asa", "BAS_CQI_ASAClassification", "ASA classification", "cat",
            c("ASA I", "ASA II", "ASA III", "ASA IV", "ASA V", "ASA VI", "Not documented")),
-    bl_var("organism_identified", "BAS_Microbio_CausativeOrganismIdentified",
+    dict_var("organism_identified", "BAS_Microbio_CausativeOrganismIdentified",
            "Causative organism identified", "bin"),
     
-    bl_var("bld_crp", "BAS_Bloods_CRP_mgL", 
+    dict_var("bld_crp", "BAS_Bloods_CRP_mgL", 
            "C-reactive protein, mg/L", "num", group = "Blood tests"),
-    bl_var("bld_creatinine", "BAS_Bloods_Antibio_SerumCreatinine_umolL",
+    dict_var("bld_creatinine", "BAS_Bloods_Antibio_SerumCreatinine_umolL",
            "Serum creatinine, umol/L", "num", group = "Blood tests"),
-    bl_var("bld_alt", "BAS_Bloods_Antibio_ALT_Entered", 
+    dict_var("bld_alt", "BAS_Bloods_Antibio_ALT_Entered", 
            "ALT", "num", group = "Blood tests"),
-    bl_var("bld_ast", "BAS_Bloods_Antibio_AST_Entered", 
+    dict_var("bld_ast", "BAS_Bloods_Antibio_AST_Entered", 
            "AST", "num", group = "Blood tests"),
-    bl_var("bld_bilirubin", "BAS_Bloods_Antibio_Bilirubin_umolL",
+    dict_var("bld_bilirubin", "BAS_Bloods_Antibio_Bilirubin_umolL",
            "Bilirubin, umol/L", "num", group = "Blood tests"),
     
-    bl_var("ohs", "BAS_OHS_Score", 
+    dict_var("ohs", "BAS_OHS_Score", 
            "Oxford Hip Score (0-48)", "num", group = "Patient reported outcomes"),
-    bl_var("oks", "BAS_OKS_Score",
+    dict_var("oks", "BAS_OKS_Score",
            "Oxford Knee Score (0-48)", "num", group = "Patient reported outcomes"),
-    bl_var("eq5d_score", "BAS_EQ5D5L_Score",
+    dict_var("eq5d_score", "BAS_EQ5D5L_Score",
            "EQ-5D-5L score", "num", group = "Patient reported outcomes"),
-    bl_var("eq5d_vas", "BAS_EQ5D5L_HealthToday",
+    dict_var("eq5d_vas", "BAS_EQ5D5L_HealthToday",
            "EQ-5D-5L health today (0-100)", "num", group = "Patient reported outcomes")
   )
 )
 
+# Day 100 form: changes to antibiotics and suspected adverse reactions. The
+# variables that are reported are in the data dictionary. 
+l_cfg$d100 <- list(
+  day = 100,
+  vars = rbind(
+    dict_var("ab_change", "D100_AR_ABChangeOrCessation", 
+             "Antibiotic change or cessation", "bin"),
+    dict_var("cdiff", "D100_AR_CDifficileDiarrhoea", 
+             "Clostridioides difficile diarrhoea", "bin"),
+    
+    # only for those that had a change or cessation of antibiotics
+    dict_var("ab_change_days", "D100_AR_ABChangeDate", 
+             "Days from randomisation to change", "days",
+             group = "Participants with an antibiotic change or cessation", 
+             when = "ab_change"),
+    dict_var("ab_first", "D100_AR_Antibiotic_1stChange", 
+             "First antibiotic changed", "cat",
+             group = "Participants with an antibiotic change or cessation", 
+             when = "ab_change"),
+    dict_var("ab_first_other", "D100_AR_Antibiotic_1stChangeSpecify", 
+             "Other antibiotic specified", "text",
+             group = "Participants with an antibiotic change or cessation", 
+             when = "ab_change"),
+    
+    dict_var("ar_nausea", "D100_AR_SuspAR_NauseaVomiting", 
+             "Nausea or vomiting", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_diarrhoea", "D100_AR_SuspAR_Diarrhoea", 
+             "Diarrhoea", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_hepato", "D100_AR_SuspAR_Hepatotoxicity", 
+             "Hepatotoxicity", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_rash", "D100_AR_SuspAR_RashOrItch", 
+             "Rash or itch", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_neuro", "D100_AR_SuspAR_Neurological", 
+             "Neurological", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_musculo", "D100_AR_SuspAR_Musculoskeletal", 
+             "Musculoskeletal", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_haem", "D100_AR_SuspAR_Hematological", 
+             "Haematological", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_renal", "D100_AR_SuspAR_RenalToxicity", 
+             "Renal toxicity", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_hypersens", "D100_AR_SuspAR_Hypersensitivity", 
+             "Hypersensitivity", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_other", "D100_AR_SuspAR_Other", 
+             "Other", "bin", group = "Suspected adverse reactions"),
+    dict_var("ar_other_text", "D100_AR_SuspAR_OtherSpecify", 
+             "Other reaction described", "text", group = "Suspected adverse reactions")
+  )
+)
+
 # Primary outcome: treatment success at day 365 after platform randomisation,
-# assessed from `day` - `window` onwards. 
-l_cfg$d365 <- list(day = 365, window = 30)
+# assessed from `day` - `window` onwards. Treatment success is a composite of
+# the components on the day 365 form, defined here once and used to derive the
+# outcome in d365() and to report each component:
+#   name   - variable name in the derived data (l_po$d_po)
+#   src    - column in the raw day 365 data
+#   label  - used in the report
+#   levels - the allowed responses
+#   good   - the response that counts towards treatment success
+#   bad    - the response that is a failure of treatment
+#   event  - what the failure response means, for the report
+# Treatment success is all of the components having the good response and
+# failure is any of them having the bad response.
+d365_comp <- function(name, src, label, levels, good, bad, event){
+  data.table(
+    name = name, src = src, label = label, levels = list(levels),
+    good = good, bad = bad, event = event
+  )
+}
+
+l_cfg$d365 <- list(
+  day = 365, 
+  window = 30,
+  components = rbind(
+    d365_comp(
+      "vital_status", "D365_VitalStatus", "Vital status",
+      c("Alive", "Dead", "Unknown"), good = "Alive", bad = "Dead", 
+      event = "dead"
+    ),
+    d365_comp(
+      "infc_clin", "D365_VitalStatus_IJInfection_ClinicalEvidence", 
+      "Clinical evidence of infection",
+      c("No", "Yes", "Unknown"), good = "No", bad = "Yes",
+      event = "clinical evidence of infection"
+    ),
+    d365_comp(
+      "infc_micro", "D365_VitalStatus_IJInfection_MicrobioEvidence", 
+      "Microbiological evidence of infection",
+      c("No", "Yes", "Unknown"), good = "No", bad = "Yes",
+      event = "microbiological evidence of infection"
+    ),
+    d365_comp(
+      "prosth_in_place", "D365_VitalStatus_ProsthesisInPlace", "Prosthesis in place",
+      c("Yes", "No", "Unknown"), good = "Yes", bad = "No",
+      event = "prosthesis not in place"
+    )
+  )
+)
 
 
 l_cfg$test_codes = c("DS9")
@@ -270,6 +376,50 @@ to_factor <- function(x, levels, what = "value"){
   factor(x, levels = levels)
 }
 
+# A checkbox is exported as Checked/Unchecked. Read these as Yes/No.
+as_yes_no <- function(x){
+  x <- clean_text(x, tokens_to_na = na_tokens)
+  x_lc <- str_to_lower(x)
+  x[x_lc %in% "checked"]   <- "Yes"
+  x[x_lc %in% "unchecked"] <- "No"
+  x
+}
+
+# The values found in x, most common first
+observed_levels <- function(x){
+  x <- clean_text(x, tokens_to_na = na_tokens)
+  n <- table(x)
+  names(n)[order(-as.integer(n), names(n))]
+}
+
+# Clean the variables in a data dictionary (see dict_var()). Returns the
+# participant id and the cleaned variables, in the order of d_raw. A variable of
+# type days needs the date of platform randomisation (dt_rand) in d_raw.
+clean_vars <- function(d_raw, vars){
+  
+  d_out <- data.table(StudyPtID = d_raw$StudyPtID)
+  
+  for(i in seq_len(nrow(vars))){
+    v <- vars[i]
+    x <- d_raw[[v$src]]
+    
+    value <- switch(
+      v$type,
+      num  = to_num(x, v$name),
+      cat  = to_factor(
+        x, if(is.null(v$levels[[1]])) observed_levels(x) else v$levels[[1]], v$name
+      ),
+      bin  = to_factor(as_yes_no(x), c("No", "Yes"), v$name),
+      days = as.integer(parse_dmy_mon(x) - d_raw$dt_rand),
+      text = clean_text(x, tokens_to_na = na_tokens),
+      stop("Clean: unknown variable type ", v$type)
+    )
+    set(d_out, j = v$name, value = value)
+  }
+  d_out
+}
+
+# imports all csv data from source dir
 read_extract <- function(l_cfg){
   
   data_dir <- here::here(l_cfg$extract$data_dir)
@@ -290,28 +440,7 @@ read_extract <- function(l_cfg){
     
     l_raw[[lab]] <- fread(file = here(data_dir, basename(f)))
     
-    # check_columns(
-    #   d_file_desc$prefix[i],
-    #   cfg$data$d_file_desc$cols[i][[1]],
-    #   names(l_data_raw[[d_file_desc$name[i]]])
-    # )
-    
   }
-  
-  # if(cfg$data$verbose){
-  #   
-  #   message("Extract data date: ", 
-  #           lubridate::as_date(substr(basename(dir_data_raw), 1, 8)), 
-  #           " label ",
-  #           cfg$report$extract_dttm)
-  #   
-  #   dat_names <- names(l_data_raw)
-  #   for(i in 1:length(l_data_raw)){
-  #     message("Dataset: ", dat_names[i], " ncol ", ncol(l_data_raw[[i]]), 
-  #             " nrow ", nrow(l_data_raw[[i]]))
-  #   }
-  #   
-  # }
   
   l_raw
   
@@ -392,9 +521,10 @@ proc_withdrawals <- function(
   )
 }
 
-# Clean up the screening (platform eligibility) data
-# The intended structure of the screening steps is opaque. I have largely followed
-# what I believe the intent of the consort generation script did from Jess Massie.
+# Clean up the screening (platform eligibility) data.
+# The intended structure of the screening steps is not entirely clear.
+# Threfore, I have largely followed what seems to be the intent in the consort 
+# generation script did from JM. THe following needs to be thoroughly checked.
 screening <- function(
     d_scr, d_rm, d_wd,
     test_codes = c("DS9")
@@ -448,7 +578,7 @@ screening <- function(
   stop_duplicate(d_scr$EligibilityCode, "Screening: duplicate elig code")
   
   
-  # standardising screening outcomes per line 188 in JM code
+  # standardise screening outcomes per line 188 in JM code
   # EL_Outcome is a summary of the status of the elig assessemnt. Valid values:
   # randomised
   # randomised pending
@@ -579,7 +709,7 @@ screening <- function(
     .SD[1], keyby = StudyPtID]$StudyPtID
   
   attr(l_dat$id_pt_plt, "label") <- paste(
-    "Vector of randomised participants after removals have been processed",
+    "Vector of rand pts after removals have been processed",
     "for the screening data"
   )
   # attr(l_dat$id_pt_plt, "label")
@@ -606,9 +736,7 @@ participants <- function(
   cols <- c(
     "StudyPtID"
   )
-  d_pt_list[, (cols) := lapply(.SD, function(z){ 
-    clean_text(z) 
-  }), .SDcols = cols]
+  d_pt_list[, (cols) := lapply(.SD, function(z){ clean_text(z) }), .SDcols = cols]
   
   message("Pts: remove test codes...")
   d_pt_list[, id_prefix := tstrsplit(StudyPtID, "-", fixed = T, keep = 1)]
@@ -639,11 +767,11 @@ participants <- function(
     message(msg)
   }
   
-  # The reporting population: randomised participants that are in the 
-  # participant list because some randomised participants are missing from
-  # the list, per message above. All of the processing that follows 
-  # (baseline, primary outcome, deviations, domains) is restricted to these 
-  # participants so every table in the report has the same denominator.
+  # Randomised participants that are in the participant list. Currently some 
+  # randomised participants are missing from the list, per message above. 
+  # All of the processing that follows (baseline, primary outcome, deviations, 
+  # domains) is restricted to these participants so every table in the report 
+  # has the same denominator.
   d_pt <- d_pt_list[StudyPtID %in% ids_rand]
   d_pt[, site := id_prefix]
   d_pt[, dt_rand := as.Date(PT_RandomisationFirstLocal, format = "%d/%m/%Y")]
@@ -656,8 +784,8 @@ participants <- function(
   )
   
   # return processed sets:
-  #   d_pt_list: participant list with test sites removed
-  #   d_pt:      reporting population with site, randomisation date and days
+  #  d_pt_list: participant list with test sites removed
+  #  d_pt:      reporting population with site, randomisation date and days
   #              since randomisation added
   list(
     d_pt_list = d_pt_list,
@@ -678,16 +806,15 @@ domain <- function(
   stopifnot(n_na == 0)
   
   v_n <- c(nrow(d_dm))
-  message("Domain: ", l_dm_def$label, " has ",   last(v_n), " rows.")
+  message("Domain: ", l_dm_def$label, " has ",   last(v_n), " rows in the raw data.")
   
   cols <- c(
     "StudyPtID",  
     "EL_Outcome"
   )
-  d_dm[, (cols) := lapply(.SD, function(z){ 
-    clean_text(z) 
-  }), .SDcols = cols]
-  # NA is assumed to be pending
+  d_dm[,(cols) := lapply(.SD, function(z){clean_text(z)}), .SDcols = cols]
+  # NA will be assumed to be pending
+  message("Domain: assuming NA in EL_outcome implies pending state")
   # table(d_dm$EL_Outcome, useNA = "always") 
   
   # remove test codes
@@ -704,25 +831,28 @@ domain <- function(
   stopifnot(n_unexpected == 0)
   
   
+  # are there any pts in the domain data that do not appear in the 
+  # rand data. why this would be permitted by the database is unknown as it
+  # would seem to violate a logical relational constraint.
   n_excl <- d_dm[!(StudyPtID %in% unique(d_rand$StudyPtID)), .N]
   if(n_excl){
-    message("Domain: exclude ", n_excl, " pts not in rand data")
+    message("Domain: exclude ", n_excl, " pts that did not appear in rand data")
     d_dm <- d_dm[StudyPtID %in% unique(d_rand$StudyPtID)]
   }
   
   
-  # are there any multiple outcomes per pt?
+  # are there any pts that have multiple values for their outcome listed?
   d_dm_tmp <- unique(d_dm[, .(StudyPtID, EL_Outcome)])
   n_mult_outcome <- d_dm_tmp[, .N, keyby = StudyPtID][N>1, .N]
   if(n_mult_outcome){
-    message("Domain: ", n_mult_outcome, " pts have distinct outcomes")
+    message("Domain: ", n_mult_outcome, " pts have multiple outcome values")
   }
   
   
-  # for duration domains
-  # if the outcome is set to eliminated then it means that the pt was
-  # assigned to the other revision type and so should be dropped from 
-  # this domain population
+  # for duration domains only!!
+  # if the outcome is set to eliminated, it means that the pt was
+  # assigned to the other revision type and so they should not be counted as 
+  # being part of this (duration) domain
   if(l_dm_def$dur_dom){
     n_elim <- d_dm[(EL_Outcome %in% c("Eliminated")), .N]
     
@@ -745,6 +875,7 @@ domain <- function(
     d_dm, d_pt_list[, c("StudyPtID", l_dm_def$trt_col), with = F], 
     by = "StudyPtID", all.x = T
     )
+  # all possible treatment arms for this domain:
   trt_lu <- unlist(l_dm_def$trt_map)
   d_dm[, trt := unname(trt_lu[match(d_dm[[l_dm_def$trt_col]], names(trt_lu))])]
   
@@ -753,18 +884,18 @@ domain <- function(
     message("Domain: ", n_mis_alloc, " randomised but missing allocation")
   }
   
+  # If the dm data shows a pt recorded as randomised but without a trt allocated
+  # then something is wrong.
   n_mis_out <- d_dm[!(EL_Outcome %in% "Randomised") & !is.na(trt), .N]
   if(n_mis_out){
     message("Domain: ", n_mis_out, " outcome not rand but has allocation")
-    
     message("Domain: * Setting allocation to NA")
-    
     d_dm[!(EL_Outcome %in% "Randomised") & !is.na(trt), trt := NA_character_]
   }
   
   n_dm <- d_dm[, .N]
   n_dm_rand <- d_dm[EL_Outcome %in% "Randomised", .N]
-  # all those from pt list with non NA value for domain allocation.
+  # all those from pt list with non NA value for domain trt allocation.
   d_pt_list_dm <- d_pt_list[ 
     !is.na(get(l_dm_def$trt_col)), c("StudyPtID", l_dm_def$trt_col), with = F]
   n_dm_rand_pt_list <- nrow(d_pt_list_dm)
@@ -785,6 +916,7 @@ domain <- function(
   for(j in seq_len(nrow(d_pt_list_mis))){
     cat("Pt list id missing from domain ", d_pt_list_mis[j, StudyPtID], "\n")
   }
+  
   
   d_dm_smry <- d_dm[, .N, keyby = .(EL_Outcome, trt)]
   for(j in seq_len(nrow(d_dm_smry))){
@@ -831,13 +963,17 @@ domain_rand <- function(l_dm, id_pop){
 # not yet revealed. `revealed` is TRUE where the participant is in d_pt_dm.
 domain_alloc <- function(d_pt, d_pt_dm, l_dm_defn){
   
+  # build up domain/pt/allocation based on the platform data
   d_alloc <- rbindlist(lapply(l_dm_defn, function(l_def){
     trt_lu <- unlist(l_def$trt_map)
+    # form a data set of study pt and their original treatment allocation 
+    # code
     d <- data.table(
       dm = l_def$dm,
       StudyPtID = d_pt$StudyPtID,
       code = clean_text(d_pt[[l_def$trt_col]])
     )[!is.na(code)]
+    # add in the actual treatment arm based on our lookup table
     d[, arm := unname(trt_lu[match(code, names(trt_lu))])]
     
     if(anyNA(d$arm)){
@@ -849,7 +985,10 @@ domain_alloc <- function(d_pt, d_pt_dm, l_dm_defn){
     d[, code := NULL]
   }))
   
+  # set revealed to false for all pts
   d_alloc[, revealed := FALSE]
+  # for those that appear in the randomised revealed set in the domain data
+  # update revealed status to true.
   d_alloc[d_pt_dm, on = .(StudyPtID, dm), revealed := TRUE]
   
   # a revealed allocation should always be in the allocation held in the list
@@ -867,18 +1006,33 @@ domain_alloc <- function(d_pt, d_pt_dm, l_dm_defn){
 
 # Primary outcome: treatment success at day 365 after platform randomisation.
 # One row per participant in d_pt (the reporting population).
-#   success - alive, no clinical or microbiological evidence of infection of the
-#             index joint and the prosthesis is in place
-#   failure - dead, evidence of infection, or the prosthesis is not in place
-# A missing or unknown component only gives a failure if another component is 
-# a failure, so success and failure can both be FALSE when the outcome is not
-# known. status then separates:
+#   success - all of the components have the good response: alive, no clinical
+#             or microbiological evidence of infection of the index joint and 
+#             the prosthesis is in place
+#   failure - any of the components has the bad response: dead, evidence of
+#             infection, or the prosthesis is not in place
+# The components are defined in l_cfg$d365$components. A missing or unknown 
+# component only gives a failure if another component is a failure, so success
+# and failure can both be FALSE when the outcome is not known. status then
+# separates:
 #   Outcome missing - the window has opened (day 365 - window) and the outcome
 #                     is not known
 #   Not yet due     - the window has not opened
+#
+# Returns
+#   d_po:      one row per participant with the component responses (as 
+#              factors), success, failure and status. For participants that 
+#              died, the date of death and the days from platform randomisation.
+#   d_po_comp: the components in long format, one row per participant and 
+#              component. The response is the response on the day 365 form or,
+#              if there is none, Not recorded (the window has opened) or Not 
+#              yet due.
 d365 <- function(
     d_d365, d_pt, l_d365_cfg
 ){
+  
+  comps <- l_d365_cfg$components
+  win_open <- l_d365_cfg$day - l_d365_cfg$window
   
   # critical fields for primary outcome
   # StudyPtID
@@ -889,12 +1043,17 @@ d365 <- function(
   # D365_VitalStatus_ProsthesisInPlace
   
   d_o <- d_d365[, .(
-    StudyPtID       = clean_text(StudyPtID),
-    alive           = str_to_lower(clean_text(D365_VitalStatus)),
-    infc_clin       = str_to_lower(clean_text(D365_VitalStatus_IJInfection_ClinicalEvidence)),
-    infc_micro      = str_to_lower(clean_text(D365_VitalStatus_IJInfection_MicrobioEvidence)),
-    prosth_in_place = str_to_lower(clean_text(D365_VitalStatus_ProsthesisInPlace))
+    StudyPtID   = clean_text(StudyPtID),
+    dt_death    = parse_dmy_mon(D365_VitalStatus_DOD),
+    dod_unknown = str_to_lower(clean_text(D365_VitalStatus_DOD_Unknown)) %in% "checked"
   )]
+  # responses, as factors with the allowed levels
+  for(i in seq_len(nrow(comps))){
+    v <- comps[i]
+    set(d_o, j = v$name, value = to_factor(
+      str_to_title(clean_text(d_d365[[v$src]])), v$levels[[1]], v$name
+    ))
+  }
   d_o <- d_o[!is.na(StudyPtID)]
   stopifnot(!anyDuplicated(d_o$StudyPtID))
   
@@ -903,17 +1062,21 @@ d365 <- function(
   message("D365: ", nrow(d_o), " rows, ", n_out, " not in the reporting population")
   
   d_po <- merge(
-    d_pt[, .(StudyPtID, days_rand)], 
+    d_pt[, .(StudyPtID, dt_rand, days_rand)], 
     d_o[StudyPtID %in% d_pt$StudyPtID], 
     by = "StudyPtID", all.x = TRUE
   )
   
-  d_po[, success := alive %in% "alive" & infc_clin %in% "no" & 
-         infc_micro %in% "no" & prosth_in_place %in% "yes"]
-  d_po[, failure := alive %in% "dead" | infc_clin %in% "yes" | 
-         infc_micro %in% "yes" | prosth_in_place %in% "no"]
+  # the composite: all good for success, any bad for failure
+  is_good <- vapply(seq_len(nrow(comps)), function(i){
+    d_po[[comps$name[i]]] %in% comps$good[i]
+  }, logical(nrow(d_po)))
+  is_bad <- vapply(seq_len(nrow(comps)), function(i){
+    d_po[[comps$name[i]]] %in% comps$bad[i]
+  }, logical(nrow(d_po)))
+  d_po[, success := rowSums(is_good) == nrow(comps)]
+  d_po[, failure := rowSums(is_bad) > 0]
   
-  win_open <- l_d365_cfg$day - l_d365_cfg$window
   d_po[, status := fcase(
     success,                "Success",
     failure,                "Failure",
@@ -928,9 +1091,100 @@ d365 <- function(
   for(j in seq_len(nrow(d_po_smry))){
     message("D365: ", d_po_smry$status[j], ": ", d_po_smry$N[j])
   }
+  
+  # deaths: days from platform randomisation to the date of death
+  d_po[, days_to_death := as.integer(dt_death - dt_rand)]
+  d_po[, dt_rand := NULL]
+  n_dead <- d_po[vital_status %in% "Dead", .N]
+  message(
+    "D365: ", n_dead, " deaths, ", d_po[vital_status %in% "Dead" & !is.na(days_to_death), .N],
+    " with a date of death"
+  )
+  n_odd <- d_po[!is.na(days_to_death) & (days_to_death < 0 | days_to_death > days_rand), .N]
+  if(n_odd){
+    message("D365: ", n_odd, " dates of death before randomisation or after the extract")
+  }
   message("\n")
   
-  list(d_po = d_po)
+  # components in long format. A component with no response is Not recorded 
+  # once the window has opened and Not yet due before that.
+  d_po_comp <- rbindlist(lapply(seq_len(nrow(comps)), function(i){
+    v <- comps[i]
+    resp <- d_po[[v$name]]
+    data.table(
+      StudyPtID = d_po$StudyPtID,
+      component = v$name,
+      response  = factor(
+        fcase(
+          !is.na(resp),          as.character(resp),
+          d_po$days_rand >= win_open, "Not recorded",
+          default =              "Not yet due"
+        ),
+        levels = c(v$levels[[1]], "Not recorded", "Not yet due")
+      )
+    )
+  }))
+  d_po_comp[, component := factor(component, levels = comps$name)]
+  
+  list(
+    d_po = d_po,
+    d_po_comp = d_po_comp
+  )
+}
+
+# Day 100 form: changes to antibiotics and suspected adverse reactions.
+# One row per participant in d_pt (the reporting population). A participant
+# without a day 100 form has has_d100 = FALSE and the values NA, so the 
+# summaries should be of those with a form. The variables are cleaned as set 
+# out in the data dictionary l_cfg$d100$vars. The date of the change in 
+# antibiotics is the days from platform randomisation. 
+d100 <- function(
+    d_d100, d_pt, l_d100_cfg
+){
+  
+  d_d100[, StudyPtID := clean_text(StudyPtID)]
+  d_d100 <- d_d100[!is.na(StudyPtID)]
+  stopifnot(!anyDuplicated(d_d100$StudyPtID))
+  
+  n_out <- d_d100[!(StudyPtID %in% d_pt$StudyPtID), .N]
+  message("D100: ", nrow(d_d100), " rows, ", n_out, " not in the reporting population")
+  
+  # the forms for the reporting population, with the date of randomisation
+  d_form <- merge(
+    d_pt[, .(StudyPtID, dt_rand)], 
+    d_d100[StudyPtID %in% d_pt$StudyPtID], 
+    by = "StudyPtID"
+  )
+  
+  d_ar <- clean_vars(d_form, l_d100_cfg$vars)
+  d_ar[, `:=`(has_d100 = TRUE, complete = yn(d_form$D100_Complete))]
+  
+  # report anything that looks wrong rather than silently using it
+  n_early <- d_ar[!is.na(ab_change_days) & ab_change_days < 0, .N]
+  if(n_early){
+    message("D100: ", n_early, " antibiotic changes dated before platform randomisation")
+  }
+  n_no_change <- d_ar[
+    !(ab_change %in% "Yes") & (!is.na(ab_change_days) | !is.na(ab_first)), .N
+  ]
+  if(n_no_change){
+    message(
+      "D100: ", n_no_change, " pts with a date or antibiotic of a change but ",
+      "antibiotic change or cessation is not Yes"
+    )
+  }
+  
+  # everyone in the reporting population, with has_d100 = FALSE if there is no form
+  d_ar <- merge(d_pt[, .(StudyPtID, days_rand)], d_ar, by = "StudyPtID", all.x = TRUE)
+  d_ar[is.na(has_d100), has_d100 := FALSE]
+  
+  message(
+    "D100: ", d_ar[has_d100 == TRUE, .N], " of ", nrow(d_ar), " pts have a day 100 form, ", 
+    d_ar[complete %in% TRUE, .N], " complete"
+  )
+  message("\n")
+  
+  list(d_ar = d_ar)
 }
 
 # Baseline data for the participants in id_pop (the reporting population).
@@ -950,22 +1204,12 @@ baseline <- function(d_bl, id_pop, l_bl_cfg){
   vars <- l_bl_cfg$vars
   stopifnot("organism_identified" %in% vars$name)
   
-  d_clean <- d_bl[, .(
-    StudyPtID,
+  d_clean <- clean_vars(d_bl, vars)
+  d_clean[, `:=`(
     has_bl      = TRUE,
-    bl_complete = yn(BAS_Complete),
-    org_amount  = to_num(BAS_Microbio_CausativeOrganismAmount, "organism amount")
+    bl_complete = yn(d_bl$BAS_Complete),
+    org_amount  = to_num(d_bl$BAS_Microbio_CausativeOrganismAmount, "organism amount")
   )]
-  for(i in seq_len(nrow(vars))){
-    v <- vars[i]
-    set(d_clean, j = v$name, value = switch(
-      v$type,
-      num = to_num(d_bl[[v$src]], v$name),
-      cat = to_factor(d_bl[[v$src]], v$levels[[1]], v$name),
-      bin = to_factor(d_bl[[v$src]], c("No", "Yes"), v$name),
-      stop("Baseline: unknown variable type ", v$type)
-    ))
-  }
   
   # keep everyone in the population, with has_bl = FALSE if there is no record
   d_bl_out <- merge(
@@ -1169,11 +1413,12 @@ main <- function(){
       d_dm, 
       l_dm_def,  
       d_rand =  copy(l_dat$d_rand), 
-      d_pt_list  = copy(l_pt$d_pt_list)) 
+      d_pt_list  = copy(l_pt$d_pt_list)
+      ) 
   })
   names(l_dm) <- dm_names
   
-  # the domains and trt that each pt in the reporting set are assigned to
+  # just extract the set of randomised domain pts
   l_pt$d_pt_dm <- domain_rand(l_dm, id_pop)
   
   # the domains and arms that each pt was allocated to at platform
@@ -1185,8 +1430,16 @@ main <- function(){
   # l_pt$d_pt_dm
   l_po <- d365(
     d_d365 = copy(l_raw$d365),
-    d_pt = l_pt$d_pt,
+    d_pt = copy(l_pt$d_pt),
     l_d365_cfg = l_cfg$d365
+  )
+  
+  # day 100 form: antibiotic changes and suspected adverse reactions. Platform
+  # level, join l_pt$d_pt_dm to see it by domain and arm.
+  l_d100 <- d100(
+    d_d100 = copy(l_raw$d100),
+    d_pt = l_pt$d_pt,
+    l_d100_cfg = l_cfg$d100
   )
   
   # baseline description for the reporting population. Also platform level, 
@@ -1211,7 +1464,10 @@ main <- function(){
   #           revealed, by domain), d_pt_alloc (allocated, by domain)
   #   l_dm  - one table per domain (eligibility outcome, arm)
   #   l_bl  - d_bl (baseline, one row per participant), d_micro (organisms)
-  #   l_po  - d_po (primary outcome, one row per participant)
+  #   l_po  - d_po (primary outcome, one row per participant), d_po_comp 
+  #           (its components, one row per participant and component)
+  #   l_d100 - d_ar (day 100 form: antibiotic changes and suspected adverse
+  #           reactions, one row per participant)
   #   l_pd  - d_pd (protocol deviations), d_excl (rows removed)
   #   l_raw - source data
   l_out <- list(
@@ -1221,6 +1477,7 @@ main <- function(){
     l_dm = l_dm,
     l_bl = l_bl,
     l_po = l_po,
+    l_d100 = l_d100,
     l_pd = l_pd,
     l_raw = l_raw
   )
