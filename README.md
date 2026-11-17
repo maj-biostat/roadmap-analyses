@@ -1,6 +1,10 @@
 # roadmap-analyses
 
-For now limited to refactoring data processing script (provided by JM) for consort generation.
+Data pre-processing and reporting for interim analysis.
+
+## Analysis code
+
+See `R/data-analysis/README-data-analysis.md` for details on data extract, processing, analysis and reporting.
 
 ## Data processing for consort
 
