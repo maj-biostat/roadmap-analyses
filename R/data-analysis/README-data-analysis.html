@@ -354,83 +354,120 @@ display: none;
 
 <div id="data---analysis" class="section level1">
 <h1>Data - Analysis</h1>
-<p>Data processing for analysis.</p>
-<p>The extract produces fExpects following files</p>
+<p>The interim analysis reports pre-process data extracts from spiral to
+put it in a more usable format and then store it in the derived
+directory.</p>
+<p>The analysis file (<code>data-analysis.R</code>) should be configured
+based on the current extract and <code>main</code> invoked to create the
+necessary data sets.</p>
+<p>One way to run the pre-processing (after pointing the script at the
+correct extract), is invoke <code>just data</code> from command line to
+run or interactively via invoking <code>main</code> function after
+sourcing script.</p>
+<p>Note that for convenience, the extract files are renamed per the
+following table and the script is tied to this naming scheme. The raw
+extract is stored within the <code>l_raw</code> list object under the
+new filenames and then used throughout to produce the data objects that
+are ultimately referenced in the reports.</p>
+<p>The files are stored in a folder under the data directory which is
+named according to the extract date, e.g. <code>202609021608</code></p>
 <table>
 <colgroup>
-<col width="50%" />
+<col width="36%" />
+<col width="13%" />
 <col width="50%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th align="left">Original file</th>
 <th align="left">Expected name</th>
+<th align="left">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td align="left">Baseline export_2026-09-02_1607.csv</td>
 <td align="left">baseline.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="even">
 <td align="left">D100 export_2026-09-02_1607.csv</td>
 <td align="left">d100.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
 <td align="left">D365 export_2026-09-02_1607.csv</td>
 <td align="left">d365.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="even">
 <td align="left">Domain eligibility antibiotic choice
 export_2026-09-02_1607.csv</td>
-<td align="left">d4-eligibility.csv</td>
+<td align="left">elig-ac.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
 <td align="left">Domain eligibility antibiotic duration Rev 1
 export_2026-09-02_1607.csv</td>
-<td align="left">d2-eligibility.csv</td>
+<td align="left">elig-da.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="even">
 <td align="left">Domain eligibility antibiotic duration Rev 2
 export_2026-09-02_1607.csv</td>
-<td align="left">d3-eligibility.csv</td>
+<td align="left">elig-db.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
 <td align="left">Domain eligibility surgical
 export_2026-09-02_1607.csv</td>
-<td align="left">d1-eligibility.csv</td>
+<td align="left">elig-sd.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="even">
 <td align="left">Participant Eligibility export_2026-09-02_1607.csv</td>
-<td align="left">platform-eligibility.csv</td>
+<td align="left">screening.csv</td>
+<td align="left">Screening data?</td>
 </tr>
 <tr class="odd">
 <td align="left">Participant list export_2026-09-02_1607.csv</td>
 <td align="left">pt-list.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="even">
 <td align="left">Protocol Deviation export_2026-09-02_1607.csv</td>
-<td align="left">protocol-deviation.csv</td>
+<td align="left">prot-dev.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
 <td align="left">Registry Baseline export_2026-09-02_1607.csv</td>
-<td align="left">registry-baseline.csv</td>
+<td align="left">reg-baseline.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="even">
 <td align="left">Registry D365 export_2026-09-02_1607.csv</td>
-<td align="left">registry-d365.csv</td>
+<td align="left">reg-d365.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
 <td align="left">Registry list export_2026-09-02_1607.csv</td>
-<td align="left">registry-pt-list.csv</td>
+<td align="left">reg-pt-list.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="even">
 <td align="left">Withdrawal - Registry export_2026-09-02_1607.csv</td>
-<td align="left">registry-withdrawal.csv</td>
+<td align="left">reg-wd.csv</td>
+<td align="left"></td>
 </tr>
 <tr class="odd">
 <td align="left">Withdrawal - Trial export_2026-09-02_1607.csv</td>
-<td align="left">withdrawal.csv</td>
+<td align="left">wd.csv</td>
+<td align="left"></td>
+</tr>
+<tr class="even">
+<td align="left">-</td>
+<td align="left">removals.csv</td>
+<td align="left">Used for overriding data in extract</td>
 </tr>
 </tbody>
 </table>
