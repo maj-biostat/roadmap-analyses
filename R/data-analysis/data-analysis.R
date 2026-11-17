@@ -41,7 +41,7 @@ l_cfg$extract$clean_cols[["plt-elig"]] <- c(
   "CON_DomainDA_DB"
 )
 
-# domain definition giving mappings etc.
+# Domain definition giving mappings etc.
 l_cfg$dm_defn <- list(
   SD = list(
     dm = "SD",
@@ -88,10 +88,11 @@ l_cfg$dm_defn <- list(
   )
 )
 
-# Data dictionaries: one row per variable that is reported, in the order it is
-# reported. A dictionary drives the cleaning of the variables (clean_vars()) and
-# the layout of the table of them in the report, so a variable is added in one
-# place. There is a dictionary for the baseline data and one for day 100.
+# Data dictionaries.
+# The dictionary drives data cleaning (clean_vars()) and the layout of the 
+# table of them in the report, so a variable is added in one place. There is 
+# a dictionary for the baseline data and one for day 100.
+# 
 #   name   - variable name in the derived data
 #   src    - column in the raw extract
 #   label  - plain text label used in the report
@@ -173,7 +174,7 @@ l_cfg$bl <- list(
   )
 )
 
-# Day 100 form: changes to antibiotics and suspected adverse reactions. The
+# Day 100 changes to antibiotics and suspected adverse reactions. The
 # variables that are reported are in the data dictionary. 
 l_cfg$d100 <- list(
   day = 100,
@@ -222,7 +223,7 @@ l_cfg$d100 <- list(
   )
 )
 
-# Primary outcome: treatment success at day 365 after platform randomisation.
+# Primary outcome which is treatment success at day 365 after platform randomisation.
 # The outcome can be assessed within `window` days either side of `day`, so the 
 # window closes on day 395. An outcome that has not been recorded is missing 
 # once the window has closed and is not yet due until then. Treatment success is a composite of
@@ -324,15 +325,18 @@ stop_duplicate <- function(x, msg = ""){
 }
 
 
+# Add value onto
 push_l <- function(l, value){
   l[length(l)+1] <- value
   l
 }
 
+# Extract last
 pull_last <- function(l){
   l[length(l)]
 }
 
+# 
 last_1m <- function(v){
   if(length(v)<2) return(NULL)
   v[length(v)-1]
@@ -340,7 +344,8 @@ last_1m <- function(v){
 
 # Parse dates such as "23-Jan-2026", optionally followed by a time. The month
 # abbreviation is matched against month.abb (always English) rather than using
-# as.Date(format = "%b") so the result does not depend on the session locale.
+# as.Date(format = "%b"). This just means that the result doesnt 
+# depend on the session locale.
 parse_dmy_mon <- function(x){
   x <- clean_text(x)
   p <- str_match(x, "^(\\d{1,2})-([A-Za-z]{3})-(\\d{4})")
@@ -348,7 +353,7 @@ parse_dmy_mon <- function(x){
   as.Date(ISOdate(as.integer(p[, 4]), mon, as.integer(p[, 2])))
 }
 
-# Tokens in the extracts that mean "no value"
+# Tokens in the extracts that I am taking to mean "no value"
 na_tokens <- c("", "n/a", "na", "null")
 
 # Yes/No text to logical; anything else is NA.
@@ -427,7 +432,7 @@ clean_vars <- function(d_raw, vars){
   d_out
 }
 
-# imports all csv data from source dir
+# Import all csv data from source dir
 read_extract <- function(l_cfg){
   
   data_dir <- here::here(l_cfg$extract$data_dir)
@@ -530,9 +535,11 @@ proc_withdrawals <- function(
 }
 
 # Clean up the screening (platform eligibility) data.
-# The intended structure of the screening steps is not entirely clear.
-# Threfore, I have largely followed what seems to be the intent in the consort 
-# generation script did from JM. THe following needs to be thoroughly checked.
+# The intended structure of the screening steps from the original consort script
+# was not entirely clear to me so this is where I have most uncertainty.
+#
+# I have largely followed what seems to be the intent in the consort generation 
+# script did from JM. THe following needs to be thoroughly checked.
 screening <- function(
     d_scr, d_rm, d_wd,
     test_codes = c("DS9")
@@ -542,7 +549,7 @@ screening <- function(
   # in contrast to the JM consort script, first I identify the removal records
   # and withdrawals before processing the screen (plt_elig) data
   
-  # removals (step) - picks up the eligibility, platform and registry codes
+  # removals - pick up the eligibility, platform and registry codes
   # for removal (if there are any)
   l_dat[["rm"]] <- proc_removals(d_rm)
   
@@ -1539,7 +1546,9 @@ main <- function(){
     test_codes = l_cfg$test_codes
   )
   
-  # The derived data. Each element is documented where it is created.
+  # Consolidated derived data. 
+  # Each element is documented where it is created.
+  #
   #   l_cfg - the configuration, including the baseline data dictionary
   #   l_dat - screening and consort counts
   #   l_pt  - d_pt_list, d_pt (reporting population), d_pt_dm (allocation
@@ -1552,6 +1561,7 @@ main <- function(){
   #           reactions, one row per participant)
   #   l_pd  - d_pd (protocol deviations), d_excl (rows removed)
   #   l_raw - source data
+  #
   l_out <- list(
     l_cfg = l_cfg,
     l_dat = l_dat,
