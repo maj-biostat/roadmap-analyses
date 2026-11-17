@@ -1,0 +1,8 @@
+RegistryPtID,RWD_ID,RWD_Complete,UserAltered,UserAlteredFullName,MissingField_Questions,MissingField_Variables,Completeness_Override,RWD_Reason,RWD_Reason_TypeOther,RWD_Reason_RequestedBy,RWD_Reason_WithdrawalDate,RWD_Notes,RWD_Total_WithdrawAll,RWD_Total_WithdrawConfirm,RWD_ACA_DataLinkage,RWD_ACA_DataLinkageConfirm
+RAH-00003-R,2,Yes,67_11/19/2024_6:15:0:232_40,LaurenBarina_67_11/19/2024_6:15:0:232_40,,,,Consent withdrawn,,Participant,10-Mar-2025 00:00:00,fffffffff,Yes,Checked,,
+RAH-00017-R,5,Yes,75_5/06/2025_0:20:47:251_52,RoisinGriffin_75_5/06/2025_0:20:47:251_52,,,,Ineligible,,Surrogate Decision Maker,12-May-2025 00:00:00,ssssssssss,No,,No,
+RAH-00019-R,3,Yes,75_3/3/2025_21:23:8:947_15,RoisinGriffin_75_3/3/2025_21:23:8:947_15,,,,Ineligible,,Surrogate Decision Maker,10-Mar-2025 00:00:00,hhhh,No,,No,
+RAH-00031-R,4,Yes,75_4/7/2025_23:19:35:171_385,RoisinGriffin_75_4/7/2025_23:19:35:171_385,,,,Consent withdrawn,,Surrogate Decision Maker,16-Apr-2025 00:00:00,,No,,Yes,Checked
+RAH-00043-R,6,Yes,75_28/05/2025_3:44:42:652_13,RoisinGriffin_75_28/05/2025_3:44:42:652_13,,,,Consent withdrawn,,Surrogate Decision Maker,28-May-2025 00:00:00,hxxxxxxxxxxxxxx,Yes,Checked,,
+WAH-00009-R,1,Yes,63_1/3/2025_0:10:57:133_13,MiaDivirgilio_63_1/3/2025_0:10:57:133_13,,,,Operational error,,Study team,03-Jan-2025 00:00:00,Participant did not consent. ,No,,No,
+WAH-00031-R,7,Yes,63_10/07/2025_4:15:19:832_205,MiaDiVirgilio_63_10/07/2025_4:15:19:832_205,,,,Consent withdrawn,,Participant,10-Jul-2025 00:00:00,,Yes,Checked,,

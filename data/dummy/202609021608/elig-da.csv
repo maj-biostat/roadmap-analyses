@@ -1,0 +1,106 @@
+DA_ID,EL_LocationCode,EL_ProtocolVersion,StudyPtID,UserAltered,UserAlteredFullName,MissingField_Questions,MissingField_Variables,EL_Outcome,EL_OutcomeReason,DA_Incl_SSRevisionPerformed,DA_Incl_SSRevisionIndexPJI,DA_Excl_CausativeOrganism,DA_Excl_AntibioSuppTherapy,DA_Excl_TreatingTeam,DA_Excl_TreatingTeamReason,DA_Excl_SSRevisionDate,DA_Excl_PE7DPrior,DA_Excl_PtNoLongerWilling
+12,WAH,4.0,WAH-00001,63_11/15/2024_3:17:28:364_171,MiaDivirgilio_63_11/15/2024_3:17:28:364_171,,,Randomised,,Yes,Yes,No,No,No,,10-Nov-2024 00:00:00,No,
+13,WAH,4.0,WAH-00002,57_11/18/2024_8:43:46:415_120,GraceNorton_57_11/18/2024_8:43:46:415_120,,,Randomised,,Yes,Yes,No,No,No,,18-Nov-2024 00:00:00,No,
+14,RPH,4.0,RPH-00004,55_11/26/2024_3:14:16:112_197,JoshuaDavis_55_11/26/2024_3:14:16:112_197,,,Randomised,,Yes,Yes,No,No,No,,26-Nov-2024 00:00:00,No,
+15,WAH,1.0,WAH-00003,63_12/19/2024_23:28:0:25_58,MiaDivirgilio_63_12/19/2024_23:28:0:25_58,,,Randomised,,Yes,Yes,No,No,No,,16-Dec-2024 00:00:00,No,
+16,RDH,1.0,RDH-00007,64_12/22/2024_21:29:17:104_28,AlexandraMowday_64_12/22/2024_21:29:17:104_28,,,Randomised,,Yes,Yes,No,No,No,,23-Dec-2024 00:00:00,No,
+17,WAH,1.0,WAH-00005,63_12/22/2024_22:43:43:92_122,MiaDivirgilio_63_12/22/2024_22:43:43:92_122,,,Randomised,,Yes,Yes,No,No,No,,20-Dec-2024 00:00:00,No,
+18,RPH,1.0,RPH-00008,55_12/24/2024_5:5:30:398_80,JoshuaDavis_55_12/24/2024_5:5:30:398_80,,,Randomised,,Yes,Yes,No,No,No,,19-Dec-2024 00:00:00,No,
+19,ACH,1.0,ACH-00009,54_12/29/2024_23:59:45:707_7,LaurensManning_54_12/29/2024_23:59:45:707_7,,,Randomised,,Yes,Yes,No,No,No,,26-Dec-2024 00:00:00,No,
+20,ACH,1.0,ACH-00010,54_12/30/2024_0:39:4:98_36,LaurensManning_54_12/30/2024_0:39:4:98_36,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,Yes,No,,,,
+21,ACH,1.0,ACH-00012,54_12/30/2024_0:59:11:469_86,LaurensManning_54_12/30/2024_0:59:11:469_86,,,Randomised,,Yes,Yes,No,No,No,,28-Dec-2024 00:00:00,No,
+22,ACH,1.0,ACH-00014,54_12/30/2024_4:50:30:98_132,LaurensManning_54_12/30/2024_4:50:30:98_132,,,Not Included,A single stage revision procedure has been performed - Answered no|The single stage revision was the initial definitive procedure for the index PJI - Answered no,No,No,No,No,No,,,,
+23,ACH,1.0,ACH-00019,75_2/10/2025_22:9:50:198_265,RoisinGriffin_75_2/10/2025_22:9:50:198_265,,,Not Included,A two stage revision procedure has been performed - Antibiotic duration domain Part B form ,Yes,Yes,No,No,No,,05-Feb-2025 00:00:00,No,No
+24,ACH,1.0,ACH-00017,75_1/23/2025_3:45:47:163_156,RoisinGriffin_75_1/23/2025_3:45:47:163_156,,,Eliminated,Two stage revision - Part A form,Yes,No,No,No,No,,22-Jan-2025 00:00:00,No,
+25,RAH,1.0,RAH-00004,75_2/2/2025_22:48:15:92_116,RoisinGriffin_75_2/2/2025_22:48:15:92_116,,,Not Included,A single stage revision procedure has been performed - Answered no|The single stage revision was the initial definitive procedure for the index PJI - Answered no,No,No,No,No,No,,,,
+26,RAH,1.0,RAH-00008,75_2/4/2025_23:23:17:558_33,RoisinGriffin_75_2/4/2025_23:23:17:558_33,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,No,No,,,,
+27,HNZ,1.0,HNZ-00005,75_2/4/2025_23:49:14:196_146,RoisinGriffin_75_2/4/2025_23:49:14:196_146,,,Randomised,,Yes,Yes,No,No,No,,03-Feb-2025 00:00:00,No,
+28,HNZ,1.0,HNZ-00007,75_2/4/2025_23:58:14:369_211,RoisinGriffin_75_2/4/2025_23:58:14:369_211,,,Randomised,,Yes,Yes,No,No,No,,04-Feb-2025 00:00:00,No,
+29,HNZ,1.0,HNZ-00008,75_2/5/2025_0:19:25:995_242,RoisinGriffin_75_2/5/2025_0:19:25:995_242,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,No,No,,,,
+30,JNP,1.0,JNP-00002,75_2/5/2025_0:30:35:307_297,RoisinGriffin_75_2/5/2025_0:30:35:307_297,,,Randomised,,Yes,Yes,No,No,No,,03-Feb-2025 00:00:00,No,
+31,JNP,1.0,JNP-00005,75_2/5/2025_0:44:20:932_395,RoisinGriffin_75_2/5/2025_0:44:20:932_395,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,No,No,,,,
+32,JNP,1.0,JNP-00006,75_2/5/2025_0:50:12:782_433,RoisinGriffin_75_2/5/2025_0:50:12:782_433,,,Randomised,,Yes,Yes,No,No,No,,01-Feb-2025 00:00:00,No,
+33,RHH,1.0,RHH-00001,75_2/6/2025_2:52:10:457_38,RoisinGriffin_75_2/6/2025_2:52:10:457_38,,,Excluded,The single stage was >7 days prior to today,Yes,Yes,No,No,No,,09-Feb-2024 00:00:00,Yes,
+34,RHH,1.0,RHH-00002,75_2/6/2025_2:55:5:645_64,RoisinGriffin_75_2/6/2025_2:55:5:645_64,,,Randomised,,Yes,Yes,No,No,No,,04-Feb-2025 00:00:00,No,
+35,RHH,1.0,RHH-00003,75_2/6/2025_3:1:50:689_93,RoisinGriffin_75_2/6/2025_3:1:50:689_93,,,Not Included,A single stage revision procedure has been performed - Answered no|The single stage revision was the initial definitive procedure for the index PJI - Answered no,No,No,No,No,No,,,,
+36,RHH,1.0,RHH-00007,75_2/6/2025_3:22:4:352_195,RoisinGriffin_75_2/6/2025_3:22:4:352_195,,,Randomised,,Yes,Yes,No,No,No,,06-Feb-2025 00:00:00,No,
+37,RMH,1.0,RMH-00001,75_2/6/2025_3:29:58:614_228,RoisinGriffin_75_2/6/2025_3:29:58:614_228,,,Randomised,,Yes,Yes,No,No,No,,05-Feb-2025 00:00:00,No,
+38,RMH,1.0,RMH-00002,75_2/6/2025_3:33:29:213_255,RoisinGriffin_75_2/6/2025_3:33:29:213_255,,,Randomised,,Yes,Yes,No,No,No,,05-Feb-2025 00:00:00,No,
+39,RAH,4.0,RAH-00002,75_2/6/2025_4:4:51:448_346,RoisinGriffin_75_2/6/2025_4:4:51:448_346,,,Randomised,,Yes,Yes,No,No,No,,05-Feb-2025 00:00:00,No,
+40,RDH,1.0,RDH-00014,75_2/6/2025_4:14:0:149_377,RoisinGriffin_75_2/6/2025_4:14:0:149_377,,,Randomised,,Yes,Yes,No,No,No,,30-Jan-2025 00:00:00,No,
+41,RDH,1.0,RDH-00013,75_2/6/2025_4:17:31:507_393,RoisinGriffin_75_2/6/2025_4:17:31:507_393,,,Randomised,,Yes,Yes,No,No,No,,04-Feb-2025 00:00:00,No,
+42,RDH,4.0,RDH-00005,75_2/6/2025_4:27:52:716_480,RoisinGriffin_75_2/6/2025_4:27:52:716_480,,,Randomised,,Yes,Yes,No,No,No,,05-Feb-2025 00:00:00,No,
+43,RDH,4.0,RDH-00004,75_2/6/2025_4:30:59:755_498,RoisinGriffin_75_2/6/2025_4:30:59:755_498,,,Randomised,,Yes,Yes,No,No,No,,05-Feb-2025 00:00:00,No,
+44,RDH,1.0,RDH-00008,75_2/6/2025_4:38:19:834_534,RoisinGriffin_75_2/6/2025_4:38:19:834_534,,,Randomised,,Yes,Yes,No,No,No,,05-Feb-2025 00:00:00,No,
+45,ACH,1.0,ACH-00021,75_2/10/2025_21:34:50:85_71,RoisinGriffin_75_2/10/2025_21:34:50:85_71,,,Randomised,,Yes,Yes,No,No,No,,04-Feb-2025 00:00:00,No,No
+46,RPH,1.0,RPH-00013,55_2/10/2025_21:54:56:330_172,JoshuaDavis_55_2/10/2025_21:54:56:330_172,,,Randomised,,Yes,Yes,No,No,No,,10-Feb-2025 00:00:00,No,No
+47,ACH,4.0,ACH-00003,75_2/10/2025_21:57:58:864_196,RoisinGriffin_75_2/10/2025_21:57:58:864_196,,,Randomised,,Yes,Yes,No,No,No,,10-Feb-2025 00:00:00,No,No
+48,JNP,1.0,JNP-00007,75_2/11/2025_22:15:8:877_68,RoisinGriffin_75_2/11/2025_22:15:8:877_68,,,Randomised,,Yes,Yes,No,No,No,,12-Feb-2025 00:00:00,No,No
+49,WAH,1.0,WAH-00013,63_2/18/2025_5:30:38:820_260,MiaDiVirgilio_63_2/18/2025_5:30:38:820_260,,,Randomised,,Yes,Yes,No,No,No,,12-Feb-2025 00:00:00,No,No
+50,RPH,1.0,RPH-00020,75_2/18/2025_22:1:47:766_77,RoisinGriffin_75_2/18/2025_22:1:47:766_77,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,No,No,,,,No
+51,RDH,1.0,RDH-00023,64_2/19/2025_20:45:2:736_182,AlexandraMowday_64_2/19/2025_20:45:2:736_182,,,Randomised,,Yes,Yes,No,No,No,,16-Feb-2025 00:00:00,No,No
+52,HNZ,1.0,HNZ-00009,58_2/20/2025_1:31:24:940_530,SandyIsles_58_2/20/2025_1:31:24:940_530,,,Randomised,,Yes,Yes,No,No,No,,20-Feb-2025 00:00:00,No,No
+53,RPH,1.0,RPH-00022,75_3/4/2025_21:56:21:815_59,RoisinGriffin_75_3/4/2025_21:56:21:815_59,,,Randomised,,Yes,Yes,No,No,No,,02-Mar-2025 00:00:00,No,No
+54,RAH,1.0,RAH-00023,75_3/5/2025_4:19:14:163_341,RoisinGriffin_75_3/5/2025_4:19:14:163_341,,,Randomised,,Yes,Yes,No,No,No,,28-Feb-2025 00:00:00,No,No
+55,NZAND,1.0,NZAND-00002,77_3/8/2025_7:0:15:723_40,AudreyShearer_77_3/8/2025_7:0:15:723_40,,,Randomised,,Yes,Yes,No,No,No,,04-Mar-2025 00:00:00,No,No
+56,RPH,1.0,RPH-00023,55_3/9/2025_22:53:2:738_84,JoshuaDavis_55_3/9/2025_22:53:2:738_84,,,Randomised,,Yes,Yes,No,No,No,,07-Mar-2025 00:00:00,No,No
+57,RAH,1.0,RAH-00020,75_3/10/2025_4:12:59:22_175,RoisinGriffin_75_3/10/2025_4:12:59:22_175,,,Randomised,,Yes,Yes,No,No,No,,06-Mar-2025 00:00:00,No,No
+58,DS9,1.0,DS9-00013,46_3/12/2025_21:59:4:326_24,MelBooth_46_3/12/2025_21:59:4:326_24,,,Not Included,The single stage revision was the initial definitive procedure for the index PJI - Answered no,Yes,No,No,No,No,,12-Mar-2025 00:00:00,No,No
+59,NZAND,1.0,NZAND-00006,77_3/19/2025_22:45:6:402_1352,AudreyShearer_77_3/19/2025_22:45:6:402_1352,,,Randomised,,Yes,Yes,No,No,No,,20-Mar-2025 00:00:00,No,No
+60,RAH,1.0,RAH-00028,75_3/25/2025_3:45:54:261_408,RoisinGriffin_75_3/25/2025_3:45:54:261_408,,,Randomised,,Yes,Yes,No,No,No,,19-Mar-2025 00:00:00,No,No
+61,NZAND,1.0,NZAND-01338,77_4/3/2025_2:51:22:240_289,AudreyShearer_77_4/3/2025_2:51:22:240_289,,,Randomised,,Yes,Yes,No,No,No,,02-Apr-2025 00:00:00,No,No
+62,NZAND,1.0,NZAND-00001,77_4/8/2025_22:39:8:213_33,AudreyShearer_77_4/8/2025_22:39:8:213_33,,,Randomised,,Yes,Yes,No,No,No,,08-Apr-2025 00:00:00,No,No
+63,NZAND,1.0,NZAND-00007,77_4/9/2025_2:45:33:739_248,AudreyShearer_77_4/9/2025_2:45:33:739_248,,,,,Yes,Yes,No,No,No,,03-Apr-2025 00:00:00,No,No
+64,NZAND,1.0,NZAND-00003,77_4/9/2025_2:51:26:576_278,AudreyShearer_77_4/9/2025_2:51:26:576_278,,,Randomised,,Yes,Yes,No,No,No,,06-Apr-2025 00:00:00,No,No
+65,WAH,1.0,WAH-00024,63_18/06/2025_23:53:40:369_21,MiaDiVirgilio_63_18/06/2025_23:53:40:369_21,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,No,No,,,,No
+66,WAH,1.0,WAH-00025,63_18/06/2025_23:54:51:883_41,MiaDiVirgilio_63_18/06/2025_23:54:51:883_41,,,Excluded,One or more causative organisms is a fungus or a 'difficult to treat' bacterium ,Yes,Yes,Yes,No,No,,16-Jun-2025 00:00:00,No,No
+67,WAH,1.0,WAH-00026,63_2/07/2025_23:0:2:231_61,MiaDiVirgilio_63_2/07/2025_23:0:2:231_61,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,No,No,,,,No
+68,RAH,1.0,RAH-00041,75_7/07/2025_4:34:40:147_7,RoisinGriffin_75_7/07/2025_4:34:40:147_7,,,Randomised,,Yes,Yes,No,No,No,,04-Jul-2025 00:00:00,No,No
+69,RAH,1.0,RAH-00040,75_7/07/2025_4:37:33:294_18,RoisinGriffin_75_7/07/2025_4:37:33:294_18,,,Not Included,A single stage revision procedure has been performed - Answered no,No,Yes,No,No,No,,,,No
+70,RAH,1.0,RAH-00042,75_7/07/2025_5:7:2:29_34,RoisinGriffin_75_7/07/2025_5:7:2:29_34,,,Excluded,Treating team deems enrolment in this domain is not in the best interests of the patient ,Yes,Yes,No,No,Yes,kkkkkkkkkkkk,04-Jul-2025 00:00:00,No,No
+71,WAH,1.0,WAH-00033,63_10/07/2025_5:8:36:179_434,MiaDiVirgilio_63_10/07/2025_5:8:36:179_434,,,Randomised,,Yes,Yes,No,No,No,,08-Jul-2025 00:00:00,No,No
+72,RMH,1.0,RMH-00010,80_14/07/2025_23:47:43:16_67,RoadmapAEST_80_14/07/2025_23:47:43:16_67,,,Randomised,,Yes,Yes,No,No,No,,11-Jul-2025 00:00:00,No,No
+73,RMH,1.0,RMH-00013,80_16/07/2025_5:41:1:670_192,RoadmapAEST_80_16/07/2025_5:41:1:670_192,,,Excluded,The single stage was >7 days prior to today,Yes,Yes,No,No,No,,10-Mar-2025 00:00:00,Yes,No
+74,RAH,1.0,RAH-00054,82_23/07/2025_4:29:45:647_44,RoadmapACST_82_23/07/2025_4:29:45:647_44,,,Not Included,A single stage revision procedure has been performed - Answered no|The single stage revision was the initial definitive procedure for the index PJI - Answered no,No,No,No,No,No,,,,No
+75,RMH,1.0,RMH-00030,80_28/07/2025_5:50:6:29_95,RoadmapAEST_80_28/07/2025_5:50:6:29_95,,,Excluded,Long-term antibiotic suppressive therapy is planned following the revision operation ,Yes,Yes,No,Yes,No,,24-Jul-2025 00:00:00,No,No
+76,RMH,1.0,RMH-00033,80_6/08/2025_5:57:49:762_54,RoadmapAEST_80_6/08/2025_5:57:49:762_54,,,Not Included,A single stage revision procedure has been performed - Answered no|The single stage revision was the initial definitive procedure for the index PJI - Answered no,No,No,No,Yes,No,,,,No
+77,ACH,1.0,ACH-00035,83_18/08/2025_0:30:44:672_62,RoadmapNZST_83_18/08/2025_0:30:44:672_62,,,Randomised,,Yes,Yes,No,No,No,,13-Aug-2025 00:00:00,No,No
+78,ACH,1.0,ACH-00039,83_19/08/2025_22:52:12:575_92,RoadmapNZST_83_19/08/2025_22:52:12:575_92,,,Randomised,,Yes,Yes,No,No,No,,20-Aug-2025 00:00:00,No,No
+79,ACH,1.0,ACH-00041,83_3/09/2025_23:53:23:16_132,RoadmapNZST_83_3/09/2025_23:53:23:16_132,,,Randomised,,Yes,Yes,No,No,No,,03-Sep-2025 00:00:00,No,No
+80,DS9,4.0,DS9-00005,49_4/09/2025_3:36:8:238_251,MikeMoores_49_4/09/2025_3:36:8:238_251,,,,,No,No,No,No,No,,,,No
+81,ACH,1.0,ACH-00046,83_9/09/2025_20:17:54:777_36,RoadmapNZST_83_9/09/2025_20:17:54:777_36,,,Not Included,The single stage revision was the initial definitive procedure for the index PJI - Answered no,Yes,No,No,No,No,,08-Sep-2025 00:00:00,No,No
+82,ACH,1.0,ACH-00049,83_25/09/2025_22:10:44:432_25,RoadmapNZST_83_25/09/2025_22:10:44:432_25,,,Excluded,The single stage was >7 days prior to today,Yes,Yes,No,No,No,,08-May-2025 00:00:00,Yes,No
+83,ACH,1.0,ACH-00050,83_9/10/2025_0:14:7:193_49,RoadmapNZST_83_9/10/2025_0:14:7:193_49,,,Not Included,A single stage revision procedure has been performed - Answered no|The single stage revision was the initial definitive procedure for the index PJI - Answered no,No,No,No,No,No,,,,No
+84,AUJHH,1.0,AUJHH-00014,85_15/10/2025_2:44:47:912_209,JacintaMartin_85_15/10/2025_2:44:47:912_209,,,Not Included,The single stage revision was the initial definitive procedure for the index PJI - Answered no,Yes,No,No,No,No,,15-Oct-2025 00:00:00,No,No
+85,AUJHH,1.0,AUJHH-00015,85_29/10/2025_2:27:57:452_22,JacintaMartin_85_29/10/2025_2:27:57:452_22,,,Randomised,,Yes,Yes,No,No,No,,27-Oct-2025 00:00:00,No,No
+87,AUJHH,1.0,AUJHH-00019,85_20/11/2025_2:15:3:464_201,JacintaMartin_85_20/11/2025_2:15:3:464_201,,,Not Included,The single stage revision was the initial definitive procedure for the index PJI - Answered no,Yes,No,Yes,No,No,,13-Nov-2025 00:00:00,No,No
+88,RMH,1.0,RMH-00040,80_28/11/2025_2:22:22:948_86,RoadmapAEST_80_28/11/2025_2:22:22:948_86,,,Randomised,,Yes,Yes,No,No,No,,25-Nov-2025 00:00:00,No,No
+89,RMH,1.0,RMH-00041,80_3/12/2025_23:56:30:260_31,RoadmapAEST_80_3/12/2025_23:56:30:260_31,,,Excluded,Long-term antibiotic suppressive therapy is planned following the revision operation |The single stage was >7 days prior to today,Yes,Yes,No,Yes,No,,25-Nov-2025 00:00:00,Yes,No
+90,AUJHH,2.0,AUJHH-00024,85_3/02/2026_22:52:21:446_38,JacintaMartin_85_3/02/2026_22:52:21:446_38,,,Not Included,The single stage revision was the initial definitive procedure for the index PJI - Answered no,Yes,No,No,No,No,,03-Feb-2026 00:00:00,No,No
+91,DS9,2.0,DS9-00039,49_5/02/2026_2:6:25:927_173,MikeMoores_49_5/02/2026_2:6:25:927_173,,,Randomised,,Yes,Yes,No,No,No,,10-Feb-2026 00:00:00,No,No
+92,DS9,2.0,DS9-00040,49_5/02/2026_2:7:21:300_193,MikeMoores_49_5/02/2026_2:7:21:300_193,,,Randomised,,Yes,Yes,No,No,No,,09-Nov-2025 00:00:00,No,No
+93,DS9,2.0,DS9-00041,49_10/02/2026_21:7:26:828_25,MikeMoores_49_10/02/2026_21:7:26:828_25,,,Randomised,,Yes,Yes,No,No,No,,03-Jan-2026 00:00:00,No,No
+94,AUJHH,2.0,AUJHH-00027,49_10/02/2026_21:38:57:803_46,MikeMoores_49_10/02/2026_21:38:57:803_46,,,Randomised,,Yes,Yes,No,No,No,,12-Apr-2026 00:00:00,No,No
+95,AUJHH,2.0,AUJHH-00028,49_10/02/2026_21:41:11:723_76,MikeMoores_49_10/02/2026_21:41:11:723_76,,,Randomised,,Yes,Yes,No,No,No,,03-Jan-2026 00:00:00,No,No
+96,AUJHH,2.0,AUJHH-00031,49_17/02/2026_3:46:12:360_85,MikeMoores_49_17/02/2026_3:46:12:360_85,,,Randomised,,Yes,Yes,No,No,No,,11-Jan-2026 00:00:00,No,No
+97,DS9,2.0,DS9-00042,49_18/02/2026_22:7:4:15_28,MikeMoores_49_18/02/2026_22:7:4:15_28,,,Randomised,,Yes,Yes,No,No,No,,11-Jan-2026 00:00:00,No,No
+98,DS9,2.0,DS9-00046,49_12/03/2026_1:29:50:21_24,MikeMoores_49_12/03/2026_1:29:50:21_24,,,Randomised,,Yes,Yes,No,No,No,,21-Dec-2025 00:00:00,No,No
+99,DS9,2.0,DS9-00047,49_12/03/2026_1:33:39:781_57,MikeMoores_49_12/03/2026_1:33:39:781_57,,,,,Yes,Yes,No,No,No,,21-Dec-2025 00:00:00,Yes,No
+100,AUJHH,2.0,AUJHH-00033,56_15/04/2026_3:22:28:830_36,JessicaMassie_56_15/04/2026_3:22:28:830_36,,,Not Included,A single stage revision procedure has been performed - Answered no,No,,No,No,No,,,,No
+101,ATT,2.0,ATT-00022,48_15/04/2026_20:34:55:210_76,Anna_48_15/04/2026_20:34:55:210_76,,,Randomised,,Yes,Yes,No,No,No,,14-Apr-2026 00:00:00,No,No
+102,ATT,2.0,ATT-00023,48_15/04/2026_20:38:14:46_105,Anna_48_15/04/2026_20:38:14:46_105,,,Not Included,A single stage revision procedure has been performed - Answered no,No,,No,No,No,,,,No
+103,ATT,2.0,ATT-00027,48_24/04/2026_2:6:3:25_154,Anna_48_24/04/2026_2:6:3:25_154,,,Randomised,,Yes,Yes,No,No,No,,27-May-2025 00:00:00,No,No
+104,ATT,2.0,ATT-00028,48_24/04/2026_2:17:41:99_205,Anna_48_24/04/2026_2:17:41:99_205,,,Randomised,,Yes,Yes,No,No,No,,06-May-2025 00:00:00,No,No
+105,ATT,2.0,ATT-00029,48_24/04/2026_2:30:43:459_272,Anna_48_24/04/2026_2:30:43:459_272,,,Randomised,,Yes,Yes,No,No,No,,08-Feb-2026 00:00:00,No,No
+106,ATT,2.0,ATT-00030,48_24/04/2026_2:35:54:59_299,Anna_48_24/04/2026_2:35:54:59_299,,,Randomised,,Yes,Yes,No,No,No,,22-Apr-2026 00:00:00,No,No
+107,ATT,2.0,ATT-00031,48_24/04/2026_2:36:58:379_316,Anna_48_24/04/2026_2:36:58:379_316,,,Randomised,,Yes,Yes,No,No,No,,22-Mar-2026 00:00:00,No,No
+108,ATT,2.0,ATT-00032,48_24/04/2026_2:40:22:676_339,Anna_48_24/04/2026_2:40:22:676_339,,,Not Included,A single stage revision procedure has been performed - Answered no,No,,No,No,No,,,,No
+109,ATT,2.0,ATT-00035,48_24/04/2026_2:48:47:246_416,Anna_48_24/04/2026_2:48:47:246_416,,,Excluded,The single stage was >7 days prior to today,Yes,Yes,No,No,No,,17-Apr-2026 00:00:00,Yes,No
+110,ATT,2.0,ATT-00041,48_29/04/2026_18:59:47:239_91,Anna_48_29/04/2026_18:59:47:239_91,,,Not Included,The single stage revision was the initial definitive procedure for the index PJI - Answered no,Yes,No,No,No,No,,27-Apr-2026 00:00:00,No,No
+111,ATT,2.0,ATT-00042,48_29/04/2026_23:15:21:381_94,Anna_48_29/04/2026_23:15:21:381_94,,,Not Included,The single stage revision was the initial definitive procedure for the index PJI - Answered no,Yes,No,No,No,No,,29-Apr-2026 00:00:00,No,No
+112,AUJHH,2.0,AUJHH-00035,56_20/05/2026_3:4:3:557_100,JessicaMassie_56_20/05/2026_3:4:3:557_100,,,Not Included,A single stage revision procedure has been performed - Answered no,No,,No,No,No,,,,No
+113,RMH,2.0,RMH-00045,80_27/05/2026_3:21:47:434_54,RoadmapAEST_80_27/05/2026_3:21:47:434_54,,,Not Included,A single stage revision procedure has been performed - Answered no,No,,No,No,No,,,,No
+114,AUJHH,2.0,AUJHH-00036,56_27/05/2026_6:56:2:828_20,JessicaMassie_56_27/05/2026_6:56:2:828_20,,,,,No,,Yes,Yes,Yes,abc,,,Yes
+115,AUJHH,2.0,AUJHH-00037,91_28/05/2026_1:37:30:82_32,JessicaMassie_91_28/05/2026_1:37:30:82_32,,,Not Included,A single stage revision procedure has been performed - Answered no,No,,No,No,No,,,,No
+116,RMH,2.0,RMH-00046,80_12/06/2026_5:5:16:699_76,RoadmapAEST_80_12/06/2026_5:5:16:699_76,,,Randomised,,Yes,Yes,No,No,No,,08-Jun-2026 00:00:00,No,No
+117,RMH,2.0,RMH-00050,80_25/08/2026_5:7:1:623_50,RoadmapAEST_80_25/08/2026_5:7:1:623_50,,,Randomised,,Yes,Yes,No,No,No,,20-Aug-2026 00:00:00,No,No

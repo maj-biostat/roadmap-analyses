@@ -1,0 +1,108 @@
+RegistryPtID,Reg_EnrolFirstLocal,Reg_Age,Reg_Sex,Complete_Baseline,Complete_D365,Complete_WithD
+ACH-00001-R,18/11/2024,18,Female,Complete,Partial,Not started
+ACH-00008-R,29/12/2024,72,Male,Complete,Partial,Not started
+ACH-00011-R,30/12/2024,70,Female,Complete,Not started,Not started
+ACH-00016-R,16/01/2025,62,Male,Complete,Not started,Not started
+ACH-00020-R,20/01/2025,55,Male,Complete,Partial,Not started
+ACH-00025-R,16/04/2025,75,Female,Partial,Not started,Not started
+ACH-00029-R,13/06/2025,50,,Not started,Not started,Not started
+ACH-00031-R,14/07/2025,18,,Not started,Not started,Not started
+ACH-00034-R,18/08/2025,75,,Not started,Not started,Not started
+ACH-00036-R,20/08/2025,50,,Not started,Not started,Not started
+ACH-00037-R,20/08/2025,50,,Not started,Not started,Not started
+ACH-00042-R,4/09/2025,81,,Not started,Not started,Not started
+ACH-00044-R,8/09/2025,80,,Not started,Not started,Not started
+AUCAE-00004-R,17/11/2025,74,,Not started,Not started,Not started
+AUJHH-00002-R,17/07/2025,43,Male,Complete,Partial,Not started
+AUJHH-00003-R,23/07/2025,69,,Not started,Not started,Not started
+AUJHH-00009-R,26/08/2025,37,,Not started,Not started,Not started
+AUJHH-00022-R,11/12/2025,65,,Not started,Not started,Not started
+AUJHH-00038-R,2/06/2026,81,,Not started,Not started,Not started
+DS9-00002-R,21/11/2024,44,,Not started,Partial,Not started
+DS9-00021-R,20/08/2025,52,,Not started,Not started,Not started
+DS9-00022-R,20/08/2025,46,Male,Partial,Not started,Not started
+DS9-00035-R,10/12/2025,36,,Not started,Not started,Not started
+DS9-00036-R,10/12/2025,54,,Not started,Not started,Not started
+HNZ-00001-R,14/11/2024,55,Male,Complete,Partial,Not started
+HNZ-00002-R,26/11/2024,60,Male,Complete,Complete,Not started
+HNZ-00003-R,26/11/2024,65,,Not started,Not started,Not started
+HNZ-00010-R,20/02/2025,60,,Not started,Not started,Not started
+HNZ-00011-R,28/02/2025,75,,Not started,Not started,Not started
+JNP-00001-R,3/02/2025,55,Male,Complete,Not started,Not started
+JNP-00008-R,12/02/2025,74,Male,Complete,Not started,Not started
+JNP-00009-R,12/02/2025,59,Male,Complete,Not started,Not started
+JNP-00010-R,12/02/2025,68,Female,Complete,Not started,Not started
+RAH-00001-R,15/11/2024,70,Male,Complete,Complete,Not started
+RAH-00003-R,19/11/2024,60,Female,Complete,Partial,Complete
+RAH-00006-R,3/02/2025,77,Female,Complete,Partial,Not started
+RAH-00011-R,4/02/2025,74,Male,Complete,Partial,Not started
+RAH-00012-R,4/02/2025,76,Female,Complete,Partial,Not started
+RAH-00017-R,20/02/2025,70,Male,Complete,Not started,Complete
+RAH-00019-R,4/03/2025,45,Female,Partial,Not started,Complete
+RAH-00021-R,4/03/2025,79,Male,Partial,Partial,Not started
+RAH-00022-R,5/03/2025,63,,Not started,Not started,Not started
+RAH-00025-R,10/03/2025,71,Male,Complete,Not started,Not started
+RAH-00031-R,8/04/2025,86,Male,Complete,Complete,Complete
+RAH-00032-R,9/04/2025,81,,Partial,Not started,Not started
+RAH-00043-R,28/05/2025,77,Male,Complete,Complete,Complete
+RAH-00047-R,7/07/2025,98,,Not started,Not started,Not started
+RAH-00048-R,15/07/2025,81,,Not started,Not started,Not started
+RAH-00049-R,15/07/2025,94,,Not started,Not started,Not started
+RAH-00050-R,15/07/2025,98,,Not started,Not started,Not started
+RAH-00051-R,15/07/2025,82,,Not started,Not started,Not started
+RAH-00053-R,22/07/2025,78,,Not started,Not started,Not started
+RAH-00055-R,15/08/2025,65,Female,Complete,Not started,Not started
+RAH-00056-R,15/08/2025,65,,Not started,Not started,Not started
+RAH-00057-R,19/08/2025,31,,Not started,Not started,Not started
+RAH-00058-R,20/08/2025,49,Male,Partial,Not started,Not started
+RDH-00001-R,14/11/2024,72,Male,Complete,Not started,Not started
+RDH-00002-R,14/11/2024,70,Female,Complete,Partial,Not started
+RDH-00015-R,6/02/2025,80,Male,Complete,Not started,Not started
+RDH-00016-R,6/02/2025,69,Female,Complete,Not started,Not started
+RDH-00017-R,6/02/2025,74,Male,Complete,Not started,Not started
+RDH-00018-R,6/02/2025,69,Female,Complete,Not started,Not started
+RDH-00019-R,6/02/2025,62,Female,Complete,Not started,Not started
+RDH-00020-R,6/02/2025,76,Female,Complete,Not started,Not started
+RDH-00024-R,4/03/2025,38,Female,Partial,Not started,Not started
+RHH-00004-R,6/02/2025,73,Male,Complete,Not started,Not started
+RHH-00005-R,6/02/2025,75,Male,Complete,Not started,Not started
+RHH-00008-R,21/02/2025,60,,Not started,Not started,Not started
+RHH-00009-R,21/02/2025,85,,Not started,Not started,Not started
+RMH-00003-R,6/02/2025,77,Female,Complete,Not started,Not started
+RMH-00004-R,6/02/2025,71,Female,Complete,Not started,Not started
+RMH-00006-R,27/05/2025,42,,Not started,Not started,Not started
+RMH-00007-R,1/06/2025,53,,Not started,Not started,Not started
+RMH-00008-R,12/06/2025,52,Female,Complete,Not started,Not started
+RMH-00014-R,16/07/2025,44,Female,Complete,Partial,Not started
+RMH-00015-R,16/07/2025,60,,Not started,Not started,Not started
+RMH-00016-R,17/07/2025,49,,Not started,Not started,Not started
+RMH-00020-R,21/07/2025,33,,Not started,Not started,Not started
+RMH-00021-R,21/07/2025,65,,Not started,Not started,Not started
+RMH-00022-R,21/07/2025,55,,Not started,Not started,Not started
+RMH-00024-R,21/07/2025,45,,Not started,Not started,Not started
+RMH-00025-R,22/07/2025,34,,Not started,Not started,Not started
+RMH-00026-R,22/07/2025,28,Female,Complete,Partial,Not started
+RMH-00031-R,4/08/2025,45,,Not started,Not started,Not started
+RMH-00035-R,20/08/2025,57,,Not started,Not started,Not started
+RMH-00042-R,4/12/2025,48,Female,Partial,Not started,Not started
+RMH-00043-R,5/12/2025,59,Female,Complete,Not started,Not started
+RMH-00044-R,9/12/2025,71,Male,Complete,Not started,Not started
+RMH-00047-R,15/06/2026,61,,Not started,Not started,Not started
+RMH-00048-R,1/07/2026,61,,Not started,Not started,Not started
+RMH-00049-R,25/08/2026,61,,Not started,Not started,Not started
+RPH-00002-R,26/11/2024,23,Female,Complete,Not started,Not started
+RPH-00007-R,24/12/2024,112,Male,Complete,Not started,Not started
+RPH-00011-R,24/12/2024,47,Female,Complete,Not started,Not started
+RPH-00014-R,11/02/2025,47,Male,Complete,Not started,Not started
+RPH-00015-R,11/02/2025,27,,Partial,Not started,Not started
+RPH-00026-R,4/09/2025,65,,Not started,Not started,Not started
+RPH-00027-R,30/10/2025,70,,Not started,Not started,Not started
+WAH-00004-R,23/12/2024,19,,Complete,Not started,Not started
+WAH-00009-R,3/01/2025,56,,Complete,Not started,Complete
+WAH-00012-R,12/02/2025,76,Male,Complete,Not started,Not started
+WAH-00021-R,21/03/2025,65,Female,Partial,Not started,Not started
+WAH-00027-R,4/07/2025,34,,Not started,Not started,Not started
+WAH-00029-R,10/07/2025,35,Male,Partial,Not started,Not started
+WAH-00031-R,10/07/2025,67,,Not started,Partial,Complete
+WAH-00034-R,17/07/2025,25,Male,Partial,Not started,Not started
+WAH-00036-R,19/09/2025,87,,Not started,Not started,Not started

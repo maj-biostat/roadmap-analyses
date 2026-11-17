@@ -1,0 +1,94 @@
+DB_ID,EL_LocationCode,EL_ProtocolVersion,StudyPtID,UserAltered,UserAlteredFullName,MissingField_Questions,MissingField_Variables,EL_Outcome,EL_OutcomeReason,DB_Incl_TwoStageRevision,DB_Incl_Arthroplasty,DB_Incl_Antibiotics,DB_Incl_ReimplantOp,DB_Excl_CausativeOrganism,DB_Excl_NoCultures,DB_Excl_PeriOpCultures,DB_Excl_AntibioSuppTherapy,DB_Excl_TreatingTeam,DB_Excl_TreatingTeamReason,DB_Excl_PtNoLongerWilling
+19,WAH,4.0,WAH-00001,63_11/15/2024_3:39:1:618_193,MiaDivirgilio_63_11/15/2024_3:39:1:618_193,,,,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+20,WAH,4.0,WAH-00002,57_11/18/2024_8:45:32:248_132,GraceNorton_57_11/18/2024_8:45:32:248_132,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+21,RPH,4.0,RPH-00004,55_11/26/2024_3:16:18:109_201,JoshuaDavis_55_11/26/2024_3:16:18:109_201,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+22,WAH,1.0,WAH-00006,63_12/22/2024_22:59:47:807_173,MiaDivirgilio_63_12/22/2024_22:59:47:807_173,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+23,RPH,1.0,RPH-00009,55_12/24/2024_5:10:17:332_104,JoshuaDavis_55_12/24/2024_5:10:17:332_104,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+24,ACH,1.0,ACH-00010,54_12/30/2024_0:41:44:165_40,LaurensManning_54_12/30/2024_0:41:44:165_40,,,Excluded,Perioperative cultures collected at reimplantation grew a significant organism(s),Yes,Yes,Yes,Yes,No,No,Yes,No,No,,
+25,ACH,1.0,ACH-00014,54_12/30/2024_4:52:26:430_140,LaurensManning_54_12/30/2024_4:52:26:430_140,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+26,ACH,1.0,ACH-00015,75_1/20/2025_0:47:51:554_296,RoisinGriffin_75_1/20/2025_0:47:51:554_296,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+27,RPH,1.0,RPH-00012,75_1/21/2025_3:58:36:477_49,RoisinGriffin_75_1/21/2025_3:58:36:477_49,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+28,ACH,1.0,ACH-00019,75_2/10/2025_22:8:59:24_263,RoisinGriffin_75_2/10/2025_22:8:59:24_263,,,Eliminated,Single stage revision - Part A form,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+29,ACH,1.0,ACH-00017,75_1/23/2025_3:44:35:710_152,RoisinGriffin_75_1/23/2025_3:44:35:710_152,,,Eliminated,Single stage revision - Part A form,Yes,No,Yes,Yes,No,No,No,No,No,,
+30,RAH,1.0,RAH-00004,75_2/2/2025_22:48:28:366_120,RoisinGriffin_75_2/2/2025_22:48:28:366_120,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+31,RAH,1.0,RAH-00007,75_2/3/2025_3:35:9:166_321,RoisinGriffin_75_2/3/2025_3:35:9:166_321,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+32,RAH,1.0,RAH-00009,75_2/4/2025_0:9:10:890_39,RoisinGriffin_75_2/4/2025_0:9:10:890_39,,,Excluded,Perioperative cultures collected at reimplantation grew a significant organism(s),Yes,Yes,Yes,Yes,No,No,Yes,No,No,,
+33,RAH,1.0,RAH-00010,75_2/4/2025_3:32:6:504_104,RoisinGriffin_75_2/4/2025_3:32:6:504_104,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+34,RAH,1.0,RAH-00008,75_2/4/2025_23:23:32:529_37,RoisinGriffin_75_2/4/2025_23:23:32:529_37,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+35,HNZ,1.0,HNZ-00004,75_2/4/2025_23:44:31:397_120,RoisinGriffin_75_2/4/2025_23:44:31:397_120,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+36,HNZ,1.0,HNZ-00008,75_2/5/2025_0:20:43:510_246,RoisinGriffin_75_2/5/2025_0:20:43:510_246,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+37,JNP,1.0,JNP-00004,75_2/5/2025_0:37:22:603_357,RoisinGriffin_75_2/5/2025_0:37:22:603_357,,,Excluded,One or more causative organisms is a fungus or a 'difficult to treat' bacterium ,Yes,Yes,Yes,Yes,Yes,No,No,No,No,,
+38,JNP,1.0,JNP-00005,75_2/5/2025_0:44:37:947_399,RoisinGriffin_75_2/5/2025_0:44:37:947_399,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+39,RHH,1.0,RHH-00003,75_2/6/2025_3:6:29:739_97,RoisinGriffin_75_2/6/2025_3:6:29:739_97,,,Not Included,A two-stage revision procedure has been performed - Answered no,No,Yes,Yes,Yes,No,No,No,No,No,,
+40,RHH,1.0,RHH-00006,75_2/6/2025_3:17:32:285_164,RoisinGriffin_75_2/6/2025_3:17:32:285_164,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+41,RMH,1.0,RMH-00005,75_2/6/2025_3:43:54:891_320,RoisinGriffin_75_2/6/2025_3:43:54:891_320,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+42,RDH,1.0,RDH-00012,75_2/6/2025_4:19:40:806_415,RoisinGriffin_75_2/6/2025_4:19:40:806_415,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+43,RDH,1.0,RDH-00010,75_2/6/2025_4:23:51:946_446,RoisinGriffin_75_2/6/2025_4:23:51:946_446,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+44,RDH,4.0,RDH-00003,75_2/6/2025_4:25:27:234_461,RoisinGriffin_75_2/6/2025_4:25:27:234_461,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+45,RDH,1.0,RDH-00009,75_2/6/2025_4:34:24:243_517,RoisinGriffin_75_2/6/2025_4:34:24:243_517,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+46,RDH,4.0,RDH-00006,75_2/6/2025_4:41:20:317_553,RoisinGriffin_75_2/6/2025_4:41:20:317_553,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+47,ACH,4.0,ACH-00004,75_2/10/2025_21:30:52:749_45,RoisinGriffin_75_2/10/2025_21:30:52:749_45,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+48,ACH,1.0,ACH-00018,75_2/10/2025_21:40:55:172_114,RoisinGriffin_75_2/10/2025_21:40:55:172_114,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+49,RPH,1.0,RPH-00017,55_2/10/2025_22:0:16:987_214,JoshuaDavis_55_2/10/2025_22:0:16:987_214,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+50,WAH,1.0,WAH-00008,75_2/11/2025_23:55:3:345_296,RoisinGriffin_75_2/11/2025_23:55:3:345_296,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+51,RPH,4.0,RPH-00001,75_2/18/2025_21:48:30:62_39,RoisinGriffin_75_2/18/2025_21:48:30:62_39,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+52,RPH,1.0,RPH-00020,75_2/18/2025_22:2:0:156_81,RoisinGriffin_75_2/18/2025_22:2:0:156_81,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+53,RDH,1.0,RDH-00022,64_2/19/2025_20:25:4:272_116,AlexandraMowday_64_2/19/2025_20:25:4:272_116,,,Excluded,Perioperative cultures collected at reimplantation grew a significant organism(s),Yes,Yes,Yes,Yes,No,No,Yes,No,No,,
+54,RAH,1.0,RAH-00018,66_2/19/2025_22:44:10:972_359,GeorgiaFowler_66_2/19/2025_22:44:10:972_359,,,Excluded,Perioperative cultures collected at reimplantation grew a significant organism(s),Yes,Yes,Yes,Yes,No,No,Yes,No,No,,
+55,WAH,1.0,WAH-00019,63_3/4/2025_3:17:2:473_355,MiaDiVirgilio_63_3/4/2025_3:17:2:473_355,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+56,NZAND,1.0,NZAND-00004,77_4/9/2025_2:57:15:839_294,AudreyShearer_77_4/9/2025_2:57:15:839_294,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+57,RAH,1.0,RAH-00036,75_19/05/2025_23:36:54:843_50,RoisinGriffin_75_19/05/2025_23:36:54:843_50,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+58,RAH,1.0,RAH-00030,75_20/05/2025_0:44:8:369_103,RoisinGriffin_75_20/05/2025_0:44:8:369_103,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+59,RAH,1.0,RAH-00044,75_28/05/2025_5:5:23:248_121,RoisinGriffin_75_28/05/2025_5:5:23:248_121,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+60,RAH,1.0,RAH-00038,75_10/07/2025_3:56:45:341_107,RoisinGriffin_75_10/07/2025_3:56:45:341_107,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+61,WAH,1.0,WAH-00028,63_10/07/2025_4:43:12:805_280,MiaDiVirgilio_63_10/07/2025_4:43:12:805_280,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+62,WAH,1.0,WAH-00030,63_10/07/2025_4:56:21:256_357,MiaDiVirgilio_63_10/07/2025_4:56:21:256_357,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+63,WAH,1.0,WAH-00032,63_10/07/2025_5:5:42:640_398,MiaDiVirgilio_63_10/07/2025_5:5:42:640_398,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+64,RAH,1.0,RAH-00054,82_23/07/2025_4:30:50:449_48,RoadmapACST_82_23/07/2025_4:30:50:449_48,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+65,RAH,1.0,RAH-00037,75_24/07/2025_1:20:42:429_32,RoisinGriffin_75_24/07/2025_1:20:42:429_32,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+66,RMH,1.0,RMH-00033,80_6/08/2025_5:58:55:876_58,RoadmapAEST_80_6/08/2025_5:58:55:876_58,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+67,ACH,1.0,ACH-00050,83_9/10/2025_0:18:41:897_68,RoadmapNZST_83_9/10/2025_0:18:41:897_68,,,Not Included,A two-stage revision procedure has been performed - Answered no|6 weeks of antibiotics has been received - Answered no|The reimplantation operation was done 7 +/-3 (i.e. 4-10) days ago  - Answered no,No,Yes,No,No,No,Yes,No,No,No,,
+68,ACH,1.0,ACH-00032,83_9/10/2025_19:42:21:466_17,RoadmapNZST_83_9/10/2025_19:42:21:466_17,,,,,No,Yes,Yes,Yes,No,Yes,No,No,No,,
+69,DS9,1.0,DS9-00024,49_10/10/2025_2:2:48:67_46,MikeMoores_49_10/10/2025_2:2:48:67_46,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+70,DS9,1.0,DS9-00023,49_10/10/2025_2:3:11:519_52,MikeMoores_49_10/10/2025_2:3:11:519_52,,,Not Included,A two-stage revision procedure has been performed - Answered no|The infected prosthesis was a primary (not revision) arthroplasty  - Answered no|6 weeks of antibiotics has been received - Answered no|The reimplantation operation was done 7 +/-3 (i.e. 4-10) days ago  - Answered no,No,No,No,No,Yes,Yes,Yes,Yes,Yes,Testing,
+71,AUJHH,1.0,AUJHH-00017,85_20/11/2025_2:6:51:555_102,JacintaMartin_85_20/11/2025_2:6:51:555_102,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+72,AUJHH,1.0,AUJHH-00013,85_20/11/2025_2:7:18:8_108,JacintaMartin_85_20/11/2025_2:7:18:8_108,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+73,AUJHH,1.0,AUJHH-00011,85_20/11/2025_2:7:36:109_114,JacintaMartin_85_20/11/2025_2:7:36:109_114,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+74,AUJHH,1.0,AUJHH-00010,85_20/11/2025_2:8:0:942_120,JacintaMartin_85_20/11/2025_2:8:0:942_120,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+75,AUJHH,1.0,AUJHH-00008,85_20/11/2025_2:8:19:724_132,JacintaMartin_85_20/11/2025_2:8:19:724_132,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+76,AUJHH,1.0,AUJHH-00007,85_20/11/2025_2:8:36:777_138,JacintaMartin_85_20/11/2025_2:8:36:777_138,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+77,AUJHH,1.0,AUJHH-00006,85_20/11/2025_2:8:52:284_144,JacintaMartin_85_20/11/2025_2:8:52:284_144,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+78,AUJHH,1.0,AUJHH-00005,85_20/11/2025_2:9:9:975_150,JacintaMartin_85_20/11/2025_2:9:9:975_150,,,Randomised,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+79,AUJHH,2.0,AUJHH-00025,85_3/02/2026_22:56:37:865_73,JacintaMartin_85_3/02/2026_22:56:37:865_73,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+80,AUJHH,2.0,AUJHH-00026,85_3/02/2026_23:0:11:297_104,JacintaMartin_85_3/02/2026_23:0:11:297_104,,,Excluded,The participant is no longer willing to participate in this domain,Yes,,Yes,Yes,No,No,No,No,No,,Yes
+81,WAH,1.0,WAH-00007,63_5/02/2026_4:7:22:317_238,MiaDiVirgilio_63_5/02/2026_4:7:22:317_238,,,,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+82,DS9,2.0,DS9-00043,49_20/02/2026_1:48:4:55_24,MikeMoores_49_20/02/2026_1:48:4:55_24,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+83,DS9,2.0,DS9-00044,49_20/02/2026_2:4:36:971_42,MikeMoores_49_20/02/2026_2:4:36:971_42,,,Excluded,One or more causative organisms is a fungus or a 'difficult to treat' bacterium |NO perioperative tissue or fluid cultures were collected at the reimplantation operation|Perioperative cultures collected at reimplantation grew a significant organism(s)|Long-term antibiotic suppressive therapy is planned following the reimplantation operation,Yes,,Yes,Yes,Yes,Yes,Yes,Yes,No,,No
+84,DS9,2.0,DS9-00045,49_20/02/2026_2:30:21:101_100,MikeMoores_49_20/02/2026_2:30:21:101_100,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+85,ATT,2.0,ATT-00023,48_15/04/2026_20:38:23:587_109,Anna_48_15/04/2026_20:38:23:587_109,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+86,ATT,2.0,ATT-00032,48_24/04/2026_2:40:33:521_343,Anna_48_24/04/2026_2:40:33:521_343,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+87,ATT,2.0,ATT-00033,48_24/04/2026_2:45:34:723_376,Anna_48_24/04/2026_2:45:34:723_376,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+88,ATT,2.0,ATT-00034,48_24/04/2026_2:47:6:626_393,Anna_48_24/04/2026_2:47:6:626_393,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+89,ATT,2.0,ATT-00036,48_24/04/2026_2:51:24:676_437,Anna_48_24/04/2026_2:51:24:676_437,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+90,ATT,2.0,ATT-00037,48_28/04/2026_23:23:31:388_78,Anna_48_28/04/2026_23:23:31:388_78,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+91,ATT,2.0,ATT-00038,48_28/04/2026_23:24:31:584_95,Anna_48_28/04/2026_23:24:31:584_95,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+92,ATT,2.0,ATT-00039,48_28/04/2026_23:26:11:980_118,Anna_48_28/04/2026_23:26:11:980_118,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+93,ATT,4.0,ATT-00021,56_29/04/2026_3:57:59:789_9,JessicaMassie_56_29/04/2026_3:57:59:789_9,,,,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+94,ATT,2.0,ATT-00040,48_29/04/2026_18:53:58:204_43,Anna_48_29/04/2026_18:53:58:204_43,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+95,ATT,2.0,ATT-00026,48_29/04/2026_23:5:44:739_58,Anna_48_29/04/2026_23:5:44:739_58,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+96,ATT,4.0,ATT-00014,48_29/04/2026_23:16:13:768_104,Anna_48_29/04/2026_23:16:13:768_104,,,,,Yes,Yes,Yes,Yes,No,No,No,No,No,,
+97,AUJHH,2.0,AUJHH-00023,56_20/05/2026_3:9:10:513_127,JessicaMassie_56_20/05/2026_3:9:10:513_127,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+99,RMH,2.0,RMH-00045,80_27/05/2026_3:23:29:938_60,RoadmapAEST_80_27/05/2026_3:23:29:938_60,,,Not Included,A two-stage revision procedure has been performed - Answered no|6 weeks of antibiotics has been received - Answered no|The reimplantation operation was done 7 +/-3 (i.e. 4-10) days ago  - Answered no,No,,No,No,No,No,No,No,No,,No
+100,DS9,2.0,DS9-00049,92_26/06/2026_3:55:23:877_20,VanessatenBroeke_92_26/06/2026_3:55:23:877_20,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+101,DS9,2.0,DS9-00050,92_26/06/2026_3:57:17:122_38,VanessatenBroeke_92_26/06/2026_3:57:17:122_38,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+102,DS9,2.0,DS9-00051,92_26/06/2026_3:58:33:862_56,VanessatenBroeke_92_26/06/2026_3:58:33:862_56,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+103,DS9,2.0,DS9-00053,92_2/07/2026_0:0:32:30_20,VanessatenBroeke_92_2/07/2026_0:0:32:30_20,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+104,ATT,2.0,ATT-00043,92_2/07/2026_0:2:10:176_43,VanessatenBroeke_92_2/07/2026_0:2:10:176_43,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+105,ATT,2.0,ATT-00044,92_2/07/2026_0:34:30:615_76,VanessatenBroeke_92_2/07/2026_0:34:30:615_76,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+106,ATT,2.0,ATT-00045,92_2/07/2026_0:35:47:771_94,VanessatenBroeke_92_2/07/2026_0:35:47:771_94,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+107,DS9,2.0,DS9-00054,92_7/07/2026_0:47:34:411_28,VanessatenBroeke_92_7/07/2026_0:47:34:411_28,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+108,DS9,2.0,DS9-00055,92_7/07/2026_0:50:22:354_56,VanessatenBroeke_92_7/07/2026_0:50:22:354_56,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+109,DS9,2.0,DS9-00056,92_7/07/2026_0:53:23:266_74,VanessatenBroeke_92_7/07/2026_0:53:23:266_74,,,Randomised,,Yes,,Yes,Yes,No,No,No,No,No,,No
+110,AUJHH,2.0,AUJHH-00039,56_10/07/2026_13:0:42:777_86,JessicaMassie_56_10/07/2026_13:0:42:777_86,,,,,Yes,,Yes,Yes,No,No,No,No,No,,No
+111,AUJHH,2.0,AUJHH-00040,56_10/07/2026_13:36:27:105_127,JessicaMassie_56_10/07/2026_13:36:27:105_127,,,,,Yes,,Yes,Yes,No,Yes,No,No,No,,No
+112,AUJHH,2.0,AUJHH-00042,56_22/07/2026_4:55:13:472_7,JessicaMassie_56_22/07/2026_4:55:13:472_7,,,,,Yes,,Yes,Yes,No,Yes,No,No,No,,No
